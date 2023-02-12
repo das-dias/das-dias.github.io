@@ -8,3 +8,8 @@ name = "site"
 
 # This page should be the root of your website. It's important.
 page = "https://das-dias.notion.site/Diogo-Andr-83a5addb4ab74ac79953218b61deeaeb"
+[site]
+    [[site.meta]]
+        name = "Diogo Andre - Web CV"
+
+    
