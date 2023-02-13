@@ -5,7 +5,7 @@
 # DO NOT CHANGE THIS VALUE. The deploy script relies on the site being deployed to the
 # "site" directory.
 name = "site"
-
+theme = "system"
 # This page should be the root of your website. It's important.
 page = "https://das-dias.notion.site/Diogo-Andr-83a5addb4ab74ac79953218b61deeaeb"
 
@@ -13,4 +13,3 @@ page = "https://das-dias.notion.site/Diogo-Andr-83a5addb4ab74ac79953218b61deeaeb
   [[site.meta]]
   name = "Diogo Andre's Web CV"
   description = "A personal web landing page to summarize my CV."
-  
