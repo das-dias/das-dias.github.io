@@ -1,2 +1,0 @@
-[console_scripts]
-das-dias-landing-page = das_dias_landing_page:main

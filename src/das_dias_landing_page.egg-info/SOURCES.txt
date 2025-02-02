@@ -1,9 +1,0 @@
-README.md
-pyproject.toml
-src/das_dias_landing_page/__init__.py
-src/das_dias_landing_page.egg-info/PKG-INFO
-src/das_dias_landing_page.egg-info/SOURCES.txt
-src/das_dias_landing_page.egg-info/dependency_links.txt
-src/das_dias_landing_page.egg-info/entry_points.txt
-src/das_dias_landing_page.egg-info/requires.txt
-src/das_dias_landing_page.egg-info/top_level.txt
