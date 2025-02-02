@@ -1,0 +1,16 @@
+site_name: Diogo André Silvares Dias
+site_author: das-dias
+site_description: "A personal landing page built on top of MkDocs documentation framework."
+nav:
+  - Home: index.md
+  - Signal-Converters: signal_converters.md
+  - Computational Electromagnetics: computational_electromagnetics.md
+theme:
+  name: slate
+  locale: en
+  highlightjs: true
+  hljs_languages:
+    - yaml
+    - toml
+    - c
+    - python

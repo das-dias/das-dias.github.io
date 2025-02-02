@@ -1,0 +1,3 @@
+ruff
+mkdocs
+mkdocs-bootswatch

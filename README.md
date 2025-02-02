@@ -1,0 +1,1 @@
+This is a simple personal landing page containing my personal and professional information. This web-based *curriculum vitae* was built on top of [MkDocs](https://www.mkdocs.org/).

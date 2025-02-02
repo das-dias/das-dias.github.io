@@ -1,0 +1,21 @@
+[project]
+name = "das-dias-landing-page"
+version = "0.1.0"
+description = "A personal landing page built on top of MkDocs."
+readme = "README.md"
+authors = [
+    { name = "dasdias", email = "das.dias6@gmail.com" }
+]
+requires-python = ">=3.11"
+dependencies = [
+    "mkdocs>=1.6.1",
+    "mkdocs-bootswatch>=1.1",
+    "ruff>=0.9.4",
+]
+
+[project.scripts]
+das-dias-landing-page = "das_dias_landing_page:main"
+
+[build-system]
+requires = ["setuptools>=61"]
+build-backend = "setuptools.build_meta"

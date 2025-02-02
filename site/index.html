@@ -1,0 +1,343 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <meta charset="utf-8">
+        <meta http-equiv="X-UA-Compatible" content="IE=edge">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <meta name="description" content="A personal landing page built on top of MkDocs documentation framework.">
+        <meta name="author" content="das-dias">
+        
+        <link rel="shortcut icon" href="img/favicon.ico">
+        <title>Diogo André Silvares Dias</title>
+        <link href="css/bootstrap.min.css" rel="stylesheet">
+        <link href="css/font-awesome.min.css" rel="stylesheet">
+        <link href="css/base.css" rel="stylesheet">
+        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/styles/darcula.min.css">
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/highlight.min.js"></script>
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/languages/yaml.min.js"></script>
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/languages/toml.min.js"></script>
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/languages/c.min.js"></script>
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/languages/python.min.js"></script>
+        <script>hljs.highlightAll();</script> 
+    </head>
+
+    <body class="homepage">
+        <div class="navbar fixed-top navbar-expand-lg navbar-dark bg-primary">
+            <div class="container">
+                <a class="navbar-brand" href=".">Diogo André Silvares Dias</a>
+                <!-- Expander button -->
+                <button type="button" class="navbar-toggler" data-toggle="collapse" data-target="#navbar-collapse">
+                    <span class="navbar-toggler-icon"></span>
+                </button>
+
+                <!-- Expanded navigation -->
+                <div id="navbar-collapse" class="navbar-collapse collapse">
+                        <!-- Main navigation -->
+                        <ul class="nav navbar-nav">
+                            <li class="navitem active">
+                                <a href="." class="nav-link">Home</a>
+                            </li>
+                            <li class="navitem">
+                                <a href="signal_converters/" class="nav-link">Signal-Converters</a>
+                            </li>
+                            <li class="navitem">
+                                <a href="computational_electromagnetics/" class="nav-link">Computational Electromagnetics</a>
+                            </li>
+                        </ul>
+
+                    <ul class="nav navbar-nav ml-auto">
+                        <li class="nav-item">
+                            <a href="#" class="nav-link" data-toggle="modal" data-target="#mkdocs_search_modal">
+                                <i class="fa fa-search"></i> Search
+                            </a>
+                        </li>
+                            <li class="nav-item">
+                                <a rel="prev" class="nav-link disabled">
+                                    <i class="fa fa-arrow-left"></i> Previous
+                                </a>
+                            </li>
+                            <li class="nav-item">
+                                <a rel="next" href="signal_converters/" class="nav-link">
+                                    Next <i class="fa fa-arrow-right"></i>
+                                </a>
+                            </li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+
+        <div class="container">
+            <div class="row">
+                    <div class="col-md-3"><div class="navbar-light navbar-expand-md bs-sidebar hidden-print affix" role="complementary">
+    <div class="navbar-header">
+        <button type="button" class="navbar-toggler collapsed" data-toggle="collapse" data-target="#toc-collapse" title="Table of Contents">
+            <span class="fa fa-angle-down"></span>
+        </button>
+    </div>
+
+    
+    <div id="toc-collapse" class="navbar-collapse collapse card bg-secondary">
+        <ul class="nav flex-column">
+            
+            <li class="nav-item" data-level="2"><a href="#personal-info" class="nav-link">📂 Personal Info</a>
+              <ul class="nav flex-column">
+              </ul>
+            </li>
+            
+            <li class="nav-item" data-level="2"><a href="#education" class="nav-link">🎓 Education</a>
+              <ul class="nav flex-column">
+              </ul>
+            </li>
+            
+            <li class="nav-item" data-level="2"><a href="#experience" class="nav-link">🏢 Experience</a>
+              <ul class="nav flex-column">
+              </ul>
+            </li>
+            
+            <li class="nav-item" data-level="2"><a href="#research" class="nav-link">📚 Research</a>
+              <ul class="nav flex-column">
+              </ul>
+            </li>
+            
+            <li class="nav-item" data-level="2"><a href="#technical-skills-tools" class="nav-link">🛠️ Technical Skills &amp; Tools</a>
+              <ul class="nav flex-column">
+              </ul>
+            </li>
+            
+            <li class="nav-item" data-level="2"><a href="#certifications" class="nav-link">🏆 Certifications</a>
+              <ul class="nav flex-column">
+              </ul>
+            </li>
+            
+            <li class="nav-item" data-level="2"><a href="#projects" class="nav-link">🔬 Projects</a>
+              <ul class="nav flex-column">
+              </ul>
+            </li>
+            
+            <li class="nav-item" data-level="2"><a href="#languages" class="nav-link">🌍 Languages</a>
+              <ul class="nav flex-column">
+              </ul>
+            </li>
+            
+            <li class="nav-item" data-level="2"><a href="#extra-curricular-activities" class="nav-link">🎭 Extra-Curricular Activities</a>
+              <ul class="nav flex-column">
+              </ul>
+            </li>
+            
+            <li class="nav-item" data-level="2"><a href="#hobbies" class="nav-link">🎨 Hobbies</a>
+              <ul class="nav flex-column">
+              </ul>
+            </li>
+        </ul>
+    </div>
+</div></div>
+                    <div class="col-md-9" role="main">
+
+<header class="header" style="display: flex; align-items: center; justify-content: space-between; padding: 10px 20px;">
+  <div class="profile-pic-container" style="flex-shrink: 0; padding: 3px;">
+    <img src="img/profile_pic.png" alt="Profile Picture" class="profile-pic" style="width: 150px; height: 150px; border-radius: 50%; object-fit: cover;">
+  </div>
+  <div class="header-titles" style="text-align: left;">
+    <h1>Analog / Mixed-Signal IC Engineer</h1>
+    PhD candidate at NOVA-UNL / TU Delft
+  </div>
+</header>
+
+<p>Welcome. This is a personal website built on top of <a href="https://www.mkdocs.org/getting-started/">MkDocs</a>.</p>
+<p>Hi! My name is Diogo André. I'm currently pursuing a PhD in Nanoelectronics under a mixed-scholarship at NOVA University of Lisbon, School of Science and Technology (Monte da Caparica, Portugal), and TU Delft, Bioelectronics Group (Delft, The Netherlands). I'm specialising in Analog / Mixed-Signal IC Design, focusing on Analog Front-Ends and Quantizer ASIC Interfaces for Ultrasound Imaging Transducer Arrays. I am also a big fan of using C-lang and Python to develop my own tools for automatic layout design and custom extractors for parasitic passive lumped elements and crosstalk between signal lines. Feel free to contact me!</p>
+<h2 id="personal-info">📂 Personal Info</h2>
+<p>📅 <em>Nov 19, 1998</em><br />
+🏠 R. Bento Gonçalves 68, 2835-674 Barreiro, Portugal<br />
+E-mail:
+📧 <a href="mailto:das.dias@campus.fct.unl.pt">das.dias@campus.fct.unl.pt</a> 
+📧 <a href="mailto:ddias@tudelft.nl">ddias@tudelft.nl</a><br />
+🔗 <a href="https://scholar.google.com/citations?user=m17D88wAAAAJ&amp;hl">Google Scholar</a><br />
+🔗 <a href="https://github.com/das-dias">GitHub</a><br />
+🔗 <a href="https://linkedin.com/in/das-dias">LinkedIn</a></p>
+<hr />
+<h2 id="education">🎓 Education</h2>
+<h3 id="msc-in-electrical-and-computers-engineering">MSc. in Electrical and Computers Engineering</h3>
+<p><em>NOVA University of Lisbon (Sep 2019 - Dec 2021)</em><br />
+<strong>Grade:</strong> 17/20  </p>
+<h3 id="bsc-in-electrical-and-computers-engineering">BSc. in Electrical and Computers Engineering</h3>
+<p><em>NOVA University of Lisbon (Sep 2016 - Jul 2019)</em><br />
+<strong>Grade:</strong> 17/20  </p>
+<hr />
+<h2 id="experience">🏢 Experience</h2>
+<h4 id="cmos-process-development-kits-pdks">CMOS Process Development Kits (PDKs)</h4>
+<p><strong>28 nm (HPC+) TSMC PDK</strong>, <strong>130 nm UMC PDK</strong></p>
+<h4 id="phd-candidate-asics-for-ultrasound-image-guided-vagus-nerve-stimulation">PhD Candidate (ASICs For Ultrasound Image-Guided Vagus Nerve Stimulation)</h4>
+<p><em>NOVA University of Lisbon, Delft University of Technology (May 2022 - Ongoing)</em></p>
+<h4 id="nyquist-data-rate-converters-course-teaching-assistant">Nyquist Data-Rate Converters Course (Teaching Assistant)</h4>
+<p><em>Delft University of Technology (Feb - May 2024)</em>  </p>
+<h4 id="erasmus-traineeship-student">Erasmus+ Traineeship Student</h4>
+<p><em>Delft University of Technology (Feb - Jun 2021)</em><br />
+- Master Thesis Dissertation  </p>
+<h4 id="electronics-ii-course-teaching-assistant">Electronics II Course (Teaching Assistant)</h4>
+<p><em>NOVA University of Lisbon (Sep - Dec 2019)</em>  </p>
+<hr />
+<h2 id="research">📚 Research</h2>
+<h4 id="a-pvt-robust-open-loop-gm-ratio-16-gain-residue-amplifier-for-1-gss-pipelined-adcs"><em>A PVT-Robust Open-loop Gm-Ratio× 16 Gain Residue Amplifier for&gt; 1 GS/s Pipelined ADCs</em></h4>
+<p><em>CTS, LASI, NOVA University of Lisbon (Dec 2023)</em><br />
+- <a href="https://ieeexplore.ieee.org/abstract/document/10558154"><strong>IEEE ISCAS ’24 Publication</strong></a>  </p>
+<h4 id="a-parasitic-resistance-extraction-tool-leveraged-by-image-processing"><em>A Parasitic Resistance Extraction Tool Leveraged by Image Processing</em></h4>
+<p><em>PDEEC, NOVA University of Lisbon (Dec 2021)</em><br />
+- <a href="https://ieeexplore.ieee.org/document/9937879"><strong>IEEE ISCAS ’22 Publication</strong></a>  </p>
+<h4 id="preliminary-assessment-of-an-ultrasonic-level-sensor-for-the-calorimetric-measurement-of-ac-losses-in-superconducting-devices"><em>Preliminary Assessment of an Ultrasonic Level Sensor for the Calorimetric Measurement of AC Losses in Superconducting Devices</em></h4>
+<p><em>CTS, NOVA University of Lisbon (Sep 2020 - Sep 2021)</em><br />
+- <a href="https://ieeexplore.ieee.org/document/9850039"><strong>YEF-ECE ’22 Publication</strong></a>  </p>
+<h4 id="ultrasound-based-cryogenic-monitoring-system-for-superconducting-systems"><em>Ultrasound-based Cryogenic Monitoring System for Superconducting Systems</em></h4>
+<p><em>CTS, NOVA University of Lisbon (Sep 2020 - Sep 2021)</em><br />
+- <a href="https://ieeexplore.ieee.org/document/9850039"><strong>EUCAS ’21 Publication</strong></a>  </p>
+<hr />
+<h2 id="technical-skills-tools">🛠️ Technical Skills &amp; Tools</h2>
+<ul>
+<li><em>Cadence</em> - <strong>Analog / Mixed-Signal Base-Band &amp; RF IC Design</strong>  </li>
+<li><em>Cadence / KLayout / Python</em> - <strong>IC Layout Design</strong>  </li>
+<li><em>Xillinx ISE</em> - <strong>Digital IC Design, Verilog</strong></li>
+<li><strong>MATLAB, Python, C, Verilog</strong>  </li>
+<li><strong>MS Office, Git, LaTeX</strong>  </li>
+<li><strong>(Mac) OSX, Linux(Ubuntu/CentOS), Windows</strong>  </li>
+</ul>
+<hr />
+<h2 id="certifications">🏆 Certifications</h2>
+<h3 id="artificial-intelligence-course">Artificial Intelligence Course</h3>
+<p><em>Samsung Innovation Campus at NOVA University of Lisbon (Jun - Sep 2021)</em>  </p>
+<hr />
+<h2 id="projects">🔬 Projects</h2>
+<h3 id="novaad"><a href="https://github.com/das-dias/novaad">novaad</a></h3>
+<p><em>Open-Source Software Contribution</em><br />
+- A Python tool for Look-up Table (LUT)-based Gm/Id Analog IC design.</p>
+<h3 id="gdsfactorygpluginsspice"><a href="https://github.com/gdsfactory/gplugins/tree/main/gplugins/spice">gdsfactory/gplugins/spice</a></h3>
+<p><em>Open-Source Software Contribution</em><br />
+- A Python library for converting between YAML Markup language and SPICE schematic netlist description language.<br />
+<code>This tool explores the use of modern computer Markup language YAML to represent schematic netlists, allowing for integrated photonic and electronic schematics to co-exist and relate to each other in a single human-readable file. YAML has also readily available Serializer/Deserializer parsers for most common programming languages (C++, C, Python, Ruby, Go, ...).</code></p>
+<ul>
+<li><em>Important Note:</em> both the base source code for the <code>gdsfactory/gplugins/spice</code> and <code>gdsfactory/gplugins/vlsir</code> tools were initially aggregated into a personal repository of mine - <a href="https://github.com/gdsfactory/gplugins/pull/77#issuecomment-1706780185"><code>parcirc</code></a>.</li>
+</ul>
+<h3 id="gdsfactorygpluginsvlsir"><a href="https://github.com/gdsfactory/gplugins/tree/main/gplugins/vlsir">gdsfactory/gplugins/vlsir</a></h3>
+<p><em>Open-Source Software Contribution</em><br />
+- A Python library for converting between Klayout's DB Netlist format and other electrical schematic file formats (SPICE, Spectre, Xyce)<br />
+- More about the tool at: <a href="https://gdsfactory.github.io/gplugins/notebooks/vlsir_netlist.html">gdsfactory.github.io/gplugins/notebooks/vlsir_netlist</a><br />
+<code>This work is supported and inspired by Dan Fritchman's VLSIR Tools work, linking the way PDK information is represented in the older, closed-source custom filesystem formats to new, open-source, supported and maintained file and binary formats that allow for a greater information compression and inter-programming language data-structure sharing and interpretation through the use of Google's Protobuf data interface protocol.</code> I highly encourage you to read more about <a href="https://www2.eecs.berkeley.edu/Pubs/TechRpts/2023/EECS-2023-275.html">Dan Fritchman's work</a>.  </p>
+<h3 id="master-thesis-dissertation">Master Thesis Dissertation</h3>
+<p><em>NOVA University of Lisbon &amp; Delft University of Technology (Sep 2020 - Dec 2021)</em><br />
+- <strong>"On the Use of Image Processing for 3D Parasitic Resistance Networks Extraction in Integrated Circuits"</strong><br />
+- <strong>Grade:</strong> 19/20  </p>
+<h3 id="zero-if-fsk-rf-receiver-analog-front-end">Zero-IF FSK RF Receiver Analog Front-End</h3>
+<p><em>NOVA University of Lisbon (Sep - Dec 2020)</em><br />
+- Designed in <strong>0.13µm (MM/RF) UMC technology</strong>  </p>
+<h3 id="120-db-gain-low-voltage-09-v-supply-operational-transconductance-amplifier">120 dB Gain, Low-Voltage (0.9 V supply) Operational Transconductance Amplifier</h3>
+<p><em>NOVA University of Lisbon (Sep - Nov 2020)</em><br />
+- Designed in <strong>0.13µm (MM/RF) UMC technology</strong>  </p>
+<h3 id="66-db-gain-100-mhz-gbw-fully-differential-hybrid-telescopic-folded-cascode-amplifier">66 dB Gain, 100 MHz GBW Fully-Differential Hybrid Telescopic-Folded Cascode Amplifier</h3>
+<p><em>NOVA University of Lisbon (Nov - Dec 2019)</em><br />
+- Designed in <strong>0.13µm (MM/RF) UMC technology</strong>  </p>
+<hr />
+<h2 id="languages">🌍 Languages</h2>
+<ul>
+<li><strong>Portuguese:</strong> ○ ○ ○ ○ ○  </li>
+<li><strong>English:</strong> ○ ○ ○ ○ ○  </li>
+<li><strong>Spanish:</strong> ○ ○ ○  </li>
+<li><strong>Dutch:</strong> ○ ○  </li>
+</ul>
+<hr />
+<h2 id="extra-curricular-activities">🎭 Extra-Curricular Activities</h2>
+<h3 id="pedagogical-committee-representative">Pedagogical Committee Representative</h3>
+<p><em>NOVA University of Lisbon (Nov 2019 - Jul 2021)</em><br />
+- Electrical and Computers Engineering Department  </p>
+<h3 id="volunteer-work-refood-telheiras-lisbon">Volunteer Work – Refood Telheiras, Lisbon</h3>
+<p><em>Sep - Dec 2019</em><br />
+- <strong>Redistribution of food waste</strong>  </p>
+<hr />
+<h2 id="hobbies">🎨 Hobbies</h2>
+<ul>
+<li>Reading and watching documentaries about History</li>
+<li>Electric Bass Guitar</li>
+<li>Half-Marathon Running</li>
+<li>Contributing to open-source EDA-CAD software</li>
+</ul></div>
+            </div>
+        </div>
+
+        <footer class="col-md-12">
+            <hr>
+            <p>Documentation built with <a href="https://www.mkdocs.org/">MkDocs</a>.</p>
+        </footer>
+        <script src="js/jquery-3.6.0.min.js"></script>
+        <script src="js/bootstrap.min.js"></script>
+        <script>
+            var base_url = ".",
+                shortcuts = {"help": 191, "next": 78, "previous": 80, "search": 83};
+        </script>
+        <script src="js/base.js"></script>
+        <script src="search/main.js"></script>
+
+        <div class="modal" id="mkdocs_search_modal" tabindex="-1" role="dialog" aria-labelledby="searchModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h4 class="modal-title" id="searchModalLabel">Search</h4>
+                <button type="button" class="close" data-dismiss="modal"><span aria-hidden="true">&times;</span><span class="sr-only">Close</span></button>
+            </div>
+            <div class="modal-body">
+                <p>From here you can search these documents. Enter your search terms below.</p>
+                <form>
+                    <div class="form-group">
+                        <input type="search" class="form-control" placeholder="Search..." id="mkdocs-search-query" title="Type search term here">
+                    </div>
+                </form>
+                <div id="mkdocs-search-results" data-no-results-text="No results found"></div>
+            </div>
+            <div class="modal-footer">
+            </div>
+        </div>
+    </div>
+</div><div class="modal" id="mkdocs_keyboard_modal" tabindex="-1" role="dialog" aria-labelledby="keyboardModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h4 class="modal-title" id="keyboardModalLabel">Keyboard Shortcuts</h4>
+                <button type="button" class="close" data-dismiss="modal"><span aria-hidden="true">&times;</span><span class="sr-only">Close</span></button>
+            </div>
+            <div class="modal-body">
+              <table class="table">
+                <thead>
+                  <tr>
+                    <th style="width: 20%;">Keys</th>
+                    <th>Action</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr>
+                    <td class="help shortcut"><kbd>?</kbd></td>
+                    <td>Open this help</td>
+                  </tr>
+                  <tr>
+                    <td class="next shortcut"><kbd>n</kbd></td>
+                    <td>Next page</td>
+                  </tr>
+                  <tr>
+                    <td class="prev shortcut"><kbd>p</kbd></td>
+                    <td>Previous page</td>
+                  </tr>
+                  <tr>
+                    <td class="search shortcut"><kbd>s</kbd></td>
+                    <td>Search</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+            <div class="modal-footer">
+            </div>
+        </div>
+    </div>
+</div>
+
+    </body>
+</html>
+
+<!--
+MkDocs version : 1.5.2
+Build Date UTC : 2025-02-02 16:28:52.827042+00:00
+-->
