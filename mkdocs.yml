@@ -3,6 +3,7 @@ site_author: das-dias
 site_description: "A personal landing page built on top of MkDocs documentation framework."
 nav:
   - Home: index.md
+  - C Programming in Jupyter: intro_to_c_in_jupyter.md
   - Signal-Converters: signal_converters.md
   - Computational Electromagnetics: computational_electromagnetics.md
 theme:
