@@ -8,7 +8,7 @@
         <meta name="author" content="das-dias">
         
         <link rel="shortcut icon" href="../img/favicon.ico">
-        <title>Computational Electromagnetics - Diogo André Silvares Dias</title>
+        <title>C Programming in Jupyter - Diogo André Silvares Dias</title>
         <link href="../css/bootstrap.min.css" rel="stylesheet">
         <link href="../css/font-awesome.min.css" rel="stylesheet">
         <link href="../css/base.css" rel="stylesheet">
@@ -37,14 +37,14 @@
                             <li class="navitem">
                                 <a href=".." class="nav-link">Home</a>
                             </li>
-                            <li class="navitem">
-                                <a href="../intro_to_c_in_jupyter/" class="nav-link">C Programming in Jupyter</a>
+                            <li class="navitem active">
+                                <a href="./" class="nav-link">C Programming in Jupyter</a>
                             </li>
                             <li class="navitem">
                                 <a href="../signal_converters/" class="nav-link">Signal-Converters</a>
                             </li>
-                            <li class="navitem active">
-                                <a href="./" class="nav-link">Computational Electromagnetics</a>
+                            <li class="navitem">
+                                <a href="../computational_electromagnetics/" class="nav-link">Computational Electromagnetics</a>
                             </li>
                         </ul>
 
@@ -55,12 +55,12 @@
                             </a>
                         </li>
                             <li class="nav-item">
-                                <a rel="prev" href="../signal_converters/" class="nav-link">
+                                <a rel="prev" href=".." class="nav-link">
                                     <i class="fa fa-arrow-left"></i> Previous
                                 </a>
                             </li>
                             <li class="nav-item">
-                                <a rel="next" class="nav-link disabled">
+                                <a rel="next" href="../signal_converters/" class="nav-link">
                                     Next <i class="fa fa-arrow-right"></i>
                                 </a>
                             </li>
@@ -82,7 +82,12 @@
     <div id="toc-collapse" class="navbar-collapse collapse card bg-secondary">
         <ul class="nav flex-column">
             
-            <li class="nav-item" data-level="1"><a href="#coming-soon" class="nav-link">Coming soon...</a>
+            <li class="nav-item" data-level="1"><a href="#introduction-hello-world" class="nav-link">Introduction: Hello World!</a>
+              <ul class="nav flex-column">
+              </ul>
+            </li>
+            
+            <li class="nav-item" data-level="1"><a href="#testing-the-c-program-python-scripting" class="nav-link">Testing the C program: Python scripting</a>
               <ul class="nav flex-column">
               </ul>
             </li>
@@ -91,7 +96,116 @@
 </div></div>
                     <div class="col-md-9" role="main">
 
-<h1 id="coming-soon">Coming soon...</h1></div>
+<h1 id="introduction-hello-world">Introduction: Hello World!</h1>
+<p>Start by writting your C-lang file:</p>
+<pre><code class="language-python">
+%%file hello_world.c
+#include &lt;stdio.h&gt;
+#include &lt;stdlib.h&gt;
+
+int main(int argc, char **argv) {
+  printf(&quot;Hello World from C in Jupyter!&quot;);
+  exit(0);
+}
+</code></pre>
+<pre><code>Overwriting hello_world.c
+</code></pre>
+<p>Now, compile your C code.</p>
+<pre><code class="language-bash">%%bash
+gcc --version
+</code></pre>
+<pre><code>Apple clang version 15.0.0 (clang-1500.3.9.4)
+Target: arm64-apple-darwin23.6.0
+Thread model: posix
+InstalledDir: /Library/Developer/CommandLineTools/usr/bin
+</code></pre>
+<p>Compiling the code with the:
+- <code>-W</code> or <code>--Wall</code> flag is useful, enabling a wide variety of usefull warnings
+- <code>-Werror</code> treats critical warnings as errors, to make your code bulletproof once debugged.</p>
+<pre><code class="language-bash">%%bash
+gcc ./hello_world.c -g -Werror -o hello_world
+</code></pre>
+<p>Now, we can finally execute our C code from Jupyter.</p>
+<pre><code class="language-bash">%%bash
+./hello_world
+</code></pre>
+<pre><code>Hello World from C in Jupyter!
+</code></pre>
+<h1 id="testing-the-c-program-python-scripting">Testing the C program: Python scripting</h1>
+<p>We can now take advantage of having a documentation system with shell and Python scripting capabilities to quickly develop input testing files to run multiple test cases against the C program. This effectively automates the unit testing of the C program.</p>
+<pre><code class="language-python">
+from itertools import permutations
+
+inputs = permutations([3, '+', 43])
+with open('permutations.in', 'w') as testfile:
+  def str_from_perm(perm: list) -&gt; str:
+    s = str(perm)
+    s = s.replace('(', ''); s = s.replace(')', ''); 
+    s = s.replace(&quot;'&quot;, ''); s = s.replace(',', '')
+    return s + '\n'
+  [testfile.write(str_from_perm(perm)) for perm in inputs]
+</code></pre>
+<pre><code class="language-python">%cat permutations.in
+</code></pre>
+<pre><code>3 + 43
+3 43 +
++ 3 43
++ 43 3
+43 3 +
+43 + 3
+</code></pre>
+<pre><code class="language-python">%%file permutations.c
+#include &lt;stdlib.h&gt;
+#include &lt;stdio.h&gt;
+#include &lt;string.h&gt;
+#include &lt;assert.h&gt;
+
+char *expected_tokens[] = {&quot;3&quot;, &quot;A&quot;, &quot;+&quot;, &quot;6&quot;, &quot;43&quot;, NULL};
+
+int arg_in_expected_tokens(char *arg, char **tokens){
+  int found_token_chars = 0;
+  for(char **it_token = tokens; *it_token != NULL; it_token++){
+    if(!strcmp(arg, *it_token))
+      return 1;
+  }
+  printf(&quot;Assertion Failed: %s not in [&quot;, arg);
+  for(char **it_token = tokens; *it_token != NULL; ++it_token)
+    printf(&quot;%s, &quot;, *it_token);
+  printf(&quot;]\n&quot;);
+  return 0;
+}
+
+int main(int argc, char **argv) {
+  assert(argc&gt;1);
+  for(int i = 1; i &lt; argc; i++)
+    assert(arg_in_expected_tokens(argv[i], expected_tokens));
+  printf(&quot;Tests: Passed\n&quot;);
+  exit(0);
+}
+</code></pre>
+<pre><code>Overwriting permutations.c
+</code></pre>
+<pre><code class="language-bash">%%bash
+gcc ./permutations.c -g -Werror -o permutations
+</code></pre>
+<p>Finally, use bash shell scripting to input all inputs, line by line, to the C programm, so that each test is verified.</p>
+<pre><code class="language-bash">%%bash
+echo &quot;&quot; &gt; permutations.out
+cat permutations.in | while read line
+do
+  ./permutations $line &gt;&gt; permutations.out
+done
+</code></pre>
+<pre><code class="language-python">%cat permutations.out
+</code></pre>
+<pre><code>Tests: Passed
+Tests: Passed
+Tests: Passed
+Tests: Passed
+Tests: Passed
+Tests: Passed
+</code></pre>
+<p>If you're developing in Linux, you can even use <a href="http://valgrind.org/">Valgrind</a> to automatically detect many memory management and threading bugs, and profile your programs in detail.</p></div>
             </div>
         </div>
 
