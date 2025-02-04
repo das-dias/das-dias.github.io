@@ -8,7 +8,7 @@
         <meta name="author" content="das-dias">
         
         <link rel="shortcut icon" href="../img/favicon.ico">
-        <title>C Programming in Jupyter - Diogo André Silvares Dias</title>
+        <title>Miscellaneous - Diogo André Silvares Dias</title>
         <link href="../css/bootstrap.min.css" rel="stylesheet">
         <link href="../css/font-awesome.min.css" rel="stylesheet">
         <link href="../css/base.css" rel="stylesheet">
@@ -38,7 +38,7 @@
                                 <a href=".." class="nav-link">Home</a>
                             </li>
                             <li class="navitem active">
-                                <a href="./" class="nav-link">C Programming in Jupyter</a>
+                                <a href="./" class="nav-link">Miscellaneous</a>
                             </li>
                             <li class="navitem">
                                 <a href="../signal_converters/" class="nav-link">Signal-Converters</a>
@@ -82,13 +82,16 @@
     <div id="toc-collapse" class="navbar-collapse collapse card bg-secondary">
         <ul class="nav flex-column">
             
-            <li class="nav-item" data-level="1"><a href="#introduction-hello-world" class="nav-link">Introduction: Hello World!</a>
+            <li class="nav-item" data-level="1"><a href="#programming-in-c-lang-with-jupyter-notebooks" class="nav-link">Programming in C-lang with Jupyter Notebooks</a>
+              <ul class="nav flex-column">
+            <li class="nav-item" data-level="2"><a href="#introduction-hello-world" class="nav-link">Introduction: Hello World!</a>
               <ul class="nav flex-column">
               </ul>
             </li>
-            
-            <li class="nav-item" data-level="1"><a href="#testing-the-c-program-python-scripting" class="nav-link">Testing the C program: Python scripting</a>
+            <li class="nav-item" data-level="2"><a href="#testing-the-c-program-python-scripting" class="nav-link">Testing the C program: Python scripting</a>
               <ul class="nav flex-column">
+              </ul>
+            </li>
               </ul>
             </li>
         </ul>
@@ -96,7 +99,10 @@
 </div></div>
                     <div class="col-md-9" role="main">
 
-<h1 id="introduction-hello-world">Introduction: Hello World!</h1>
+<p>This is a collection of interesting tools, sandboxes and projects I end up doing when I want to learn new things about programming (and more specifically scientific-programming), IC Design how EDA tools for IC design work and can be innovated.</p>
+<p>Hope you find something that you would like to try for yourself!  </p>
+<h1 id="programming-in-c-lang-with-jupyter-notebooks">Programming in C-lang with Jupyter Notebooks</h1>
+<h2 id="introduction-hello-world">Introduction: Hello World!</h2>
 <p>Start by writting your C-lang file:</p>
 <pre><code class="language-python">
 %%file hello_world.c
@@ -131,7 +137,7 @@ gcc ./hello_world.c -g -Werror -o hello_world
 </code></pre>
 <pre><code>Hello World from C in Jupyter!
 </code></pre>
-<h1 id="testing-the-c-program-python-scripting">Testing the C program: Python scripting</h1>
+<h2 id="testing-the-c-program-python-scripting">Testing the C program: Python scripting</h2>
 <p>We can now take advantage of having a documentation system with shell and Python scripting capabilities to quickly develop input testing files to run multiple test cases against the C program. This effectively automates the unit testing of the C program.</p>
 <pre><code class="language-python">
 from itertools import permutations
