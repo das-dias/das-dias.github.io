@@ -22,3 +22,12 @@ theme:
     - toml
     - c
     - python
+
+markdown_extensions:
+  - extra
+  - tables
+  - fenced_code
+
+extra_javascript:
+  - https://cdn.jsdelivr.net/npm/mathjax@2/MathJax.js?config=TeX-AMS-MML_HTMLorMML
+  - mathjaxhelper.js
