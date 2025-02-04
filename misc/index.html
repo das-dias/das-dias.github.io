@@ -12,12 +12,8 @@
         <link href="../css/bootstrap.min.css" rel="stylesheet">
         <link href="../css/font-awesome.min.css" rel="stylesheet">
         <link href="../css/base.css" rel="stylesheet">
-        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/styles/darcula.min.css">
+        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/styles/night-owl.min.css">
         <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/highlight.min.js"></script>
-        <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/languages/yaml.min.js"></script>
-        <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/languages/toml.min.js"></script>
-        <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/languages/c.min.js"></script>
-        <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/languages/python.min.js"></script>
         <script>hljs.highlightAll();</script> 
     </head>
 
@@ -104,113 +100,127 @@
 <h1 id="programming-in-c-lang-with-jupyter-notebooks">Programming in C-lang with Jupyter Notebooks</h1>
 <h2 id="introduction-hello-world">Introduction: Hello World!</h2>
 <p>Start by writting your C-lang file:</p>
-<pre><code class="language-python">
-%%file hello_world.c
-#include &lt;stdio.h&gt;
-#include &lt;stdlib.h&gt;
+<div class="codehilite"><pre><span></span><code><span class="o">%%</span><span class="n">file</span> <span class="n">hello_world</span><span class="o">.</span><span class="n">c</span>
+<span class="c1">#include &lt;stdio.h&gt;</span>
+<span class="c1">#include &lt;stdlib.h&gt;</span>
 
-int main(int argc, char **argv) {
-  printf(&quot;Hello World from C in Jupyter!&quot;);
-  exit(0);
-}
-</code></pre>
-<pre><code>Overwriting hello_world.c
-</code></pre>
+<span class="nb">int</span> <span class="n">main</span><span class="p">(</span><span class="nb">int</span> <span class="n">argc</span><span class="p">,</span> <span class="n">char</span> <span class="o">**</span><span class="n">argv</span><span class="p">)</span> <span class="p">{</span>
+  <span class="n">printf</span><span class="p">(</span><span class="s2">&quot;Hello World from C in Jupyter!&quot;</span><span class="p">);</span>
+  <span class="n">exit</span><span class="p">(</span><span class="mi">0</span><span class="p">);</span>
+<span class="p">}</span>
+</code></pre></div>
+
+<div class="codehilite"><pre><span></span><code>Overwriting hello_world.c
+</code></pre></div>
+
 <p>Now, compile your C code.</p>
-<pre><code class="language-bash">%%bash
+<div class="codehilite"><pre><span></span><code>%%bash
 gcc --version
-</code></pre>
-<pre><code>Apple clang version 15.0.0 (clang-1500.3.9.4)
+</code></pre></div>
+
+<div class="codehilite"><pre><span></span><code>Apple clang version 15.0.0 (clang-1500.3.9.4)
 Target: arm64-apple-darwin23.6.0
 Thread model: posix
 InstalledDir: /Library/Developer/CommandLineTools/usr/bin
-</code></pre>
+</code></pre></div>
+
 <p>Compiling the code with the:
 - <code>-W</code> or <code>--Wall</code> flag is useful, enabling a wide variety of usefull warnings
 - <code>-Werror</code> treats critical warnings as errors, to make your code bulletproof once debugged.</p>
-<pre><code class="language-bash">%%bash
+<div class="codehilite"><pre><span></span><code>%%bash
 gcc ./hello_world.c -g -Werror -o hello_world
-</code></pre>
+</code></pre></div>
+
 <p>Now, we can finally execute our C code from Jupyter.</p>
-<pre><code class="language-bash">%%bash
+<div class="codehilite"><pre><span></span><code>%%bash
 ./hello_world
-</code></pre>
-<pre><code>Hello World from C in Jupyter!
-</code></pre>
+</code></pre></div>
+
+<div class="codehilite"><pre><span></span><code>Hello World from C in Jupyter!
+</code></pre></div>
+
 <h2 id="testing-the-c-program-python-scripting">Testing the C program: Python scripting</h2>
 <p>We can now take advantage of having a documentation system with shell and Python scripting capabilities to quickly develop input testing files to run multiple test cases against the C program. This effectively automates the unit testing of the C program.</p>
-<pre><code class="language-python">
-from itertools import permutations
+<div class="codehilite"><pre><span></span><code><span class="kn">from</span> <span class="nn">itertools</span> <span class="kn">import</span> <span class="n">permutations</span>
 
-inputs = permutations([3, '+', 43])
-with open('permutations.in', 'w') as testfile:
-  def str_from_perm(perm: list) -&gt; str:
-    s = str(perm)
-    s = s.replace('(', ''); s = s.replace(')', ''); 
-    s = s.replace(&quot;'&quot;, ''); s = s.replace(',', '')
-    return s + '\n'
-  [testfile.write(str_from_perm(perm)) for perm in inputs]
-</code></pre>
-<pre><code class="language-python">%cat permutations.in
-</code></pre>
-<pre><code>3 + 43
-3 43 +
-+ 3 43
-+ 43 3
-43 3 +
-43 + 3
-</code></pre>
-<pre><code class="language-python">%%file permutations.c
-#include &lt;stdlib.h&gt;
-#include &lt;stdio.h&gt;
-#include &lt;string.h&gt;
-#include &lt;assert.h&gt;
+<span class="n">inputs</span> <span class="o">=</span> <span class="n">permutations</span><span class="p">([</span><span class="mi">3</span><span class="p">,</span> <span class="s1">&#39;+&#39;</span><span class="p">,</span> <span class="mi">43</span><span class="p">])</span>
+<span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="s1">&#39;permutations.in&#39;</span><span class="p">,</span> <span class="s1">&#39;w&#39;</span><span class="p">)</span> <span class="k">as</span> <span class="n">testfile</span><span class="p">:</span>
+  <span class="k">def</span> <span class="nf">str_from_perm</span><span class="p">(</span><span class="n">perm</span><span class="p">:</span> <span class="nb">list</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+    <span class="n">s</span> <span class="o">=</span> <span class="nb">str</span><span class="p">(</span><span class="n">perm</span><span class="p">)</span>
+    <span class="n">s</span> <span class="o">=</span> <span class="n">s</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="s1">&#39;(&#39;</span><span class="p">,</span> <span class="s1">&#39;&#39;</span><span class="p">);</span> <span class="n">s</span> <span class="o">=</span> <span class="n">s</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="s1">&#39;)&#39;</span><span class="p">,</span> <span class="s1">&#39;&#39;</span><span class="p">);</span> 
+    <span class="n">s</span> <span class="o">=</span> <span class="n">s</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="s2">&quot;&#39;&quot;</span><span class="p">,</span> <span class="s1">&#39;&#39;</span><span class="p">);</span> <span class="n">s</span> <span class="o">=</span> <span class="n">s</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="s1">&#39;,&#39;</span><span class="p">,</span> <span class="s1">&#39;&#39;</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">s</span> <span class="o">+</span> <span class="s1">&#39;</span><span class="se">\n</span><span class="s1">&#39;</span>
+  <span class="p">[</span><span class="n">testfile</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="n">str_from_perm</span><span class="p">(</span><span class="n">perm</span><span class="p">))</span> <span class="k">for</span> <span class="n">perm</span> <span class="ow">in</span> <span class="n">inputs</span><span class="p">]</span>
+</code></pre></div>
 
-char *expected_tokens[] = {&quot;3&quot;, &quot;A&quot;, &quot;+&quot;, &quot;6&quot;, &quot;43&quot;, NULL};
+<div class="codehilite"><pre><span></span><code><span class="o">%</span><span class="n">cat</span> <span class="n">permutations</span><span class="o">.</span><span class="ow">in</span>
+</code></pre></div>
 
-int arg_in_expected_tokens(char *arg, char **tokens){
-  int found_token_chars = 0;
-  for(char **it_token = tokens; *it_token != NULL; it_token++){
-    if(!strcmp(arg, *it_token))
-      return 1;
-  }
-  printf(&quot;Assertion Failed: %s not in [&quot;, arg);
-  for(char **it_token = tokens; *it_token != NULL; ++it_token)
-    printf(&quot;%s, &quot;, *it_token);
-  printf(&quot;]\n&quot;);
-  return 0;
-}
+<div class="codehilite"><pre><span></span><code><span class="mf">3</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="mf">43</span><span class="w"></span>
+<span class="mf">3</span><span class="w"> </span><span class="mf">43</span><span class="w"> </span><span class="o">+</span><span class="w"></span>
+<span class="o">+</span><span class="w"> </span><span class="mf">3</span><span class="w"> </span><span class="mf">43</span><span class="w"></span>
+<span class="o">+</span><span class="w"> </span><span class="mf">43</span><span class="w"> </span><span class="mf">3</span><span class="w"></span>
+<span class="mf">43</span><span class="w"> </span><span class="mf">3</span><span class="w"> </span><span class="o">+</span><span class="w"></span>
+<span class="mf">43</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="mf">3</span><span class="w"></span>
+</code></pre></div>
 
-int main(int argc, char **argv) {
-  assert(argc&gt;1);
-  for(int i = 1; i &lt; argc; i++)
-    assert(arg_in_expected_tokens(argv[i], expected_tokens));
-  printf(&quot;Tests: Passed\n&quot;);
-  exit(0);
-}
-</code></pre>
-<pre><code>Overwriting permutations.c
-</code></pre>
-<pre><code class="language-bash">%%bash
+<div class="codehilite"><pre><span></span><code><span class="o">%%</span><span class="n">file</span> <span class="n">permutations</span><span class="o">.</span><span class="n">c</span>
+<span class="c1">#include &lt;stdlib.h&gt;</span>
+<span class="c1">#include &lt;stdio.h&gt;</span>
+<span class="c1">#include &lt;string.h&gt;</span>
+<span class="c1">#include &lt;assert.h&gt;</span>
+
+<span class="n">char</span> <span class="o">*</span><span class="n">expected_tokens</span><span class="p">[]</span> <span class="o">=</span> <span class="p">{</span><span class="s2">&quot;3&quot;</span><span class="p">,</span> <span class="s2">&quot;A&quot;</span><span class="p">,</span> <span class="s2">&quot;+&quot;</span><span class="p">,</span> <span class="s2">&quot;6&quot;</span><span class="p">,</span> <span class="s2">&quot;43&quot;</span><span class="p">,</span> <span class="n">NULL</span><span class="p">};</span>
+
+<span class="nb">int</span> <span class="n">arg_in_expected_tokens</span><span class="p">(</span><span class="n">char</span> <span class="o">*</span><span class="n">arg</span><span class="p">,</span> <span class="n">char</span> <span class="o">**</span><span class="n">tokens</span><span class="p">){</span>
+  <span class="nb">int</span> <span class="n">found_token_chars</span> <span class="o">=</span> <span class="mi">0</span><span class="p">;</span>
+  <span class="k">for</span><span class="p">(</span><span class="n">char</span> <span class="o">**</span><span class="n">it_token</span> <span class="o">=</span> <span class="n">tokens</span><span class="p">;</span> <span class="o">*</span><span class="n">it_token</span> <span class="o">!=</span> <span class="n">NULL</span><span class="p">;</span> <span class="n">it_token</span><span class="o">++</span><span class="p">){</span>
+    <span class="k">if</span><span class="p">(</span><span class="err">!</span><span class="n">strcmp</span><span class="p">(</span><span class="n">arg</span><span class="p">,</span> <span class="o">*</span><span class="n">it_token</span><span class="p">))</span>
+      <span class="k">return</span> <span class="mi">1</span><span class="p">;</span>
+  <span class="p">}</span>
+  <span class="n">printf</span><span class="p">(</span><span class="s2">&quot;Assertion Failed: </span><span class="si">%s</span><span class="s2"> not in [&quot;</span><span class="p">,</span> <span class="n">arg</span><span class="p">);</span>
+  <span class="k">for</span><span class="p">(</span><span class="n">char</span> <span class="o">**</span><span class="n">it_token</span> <span class="o">=</span> <span class="n">tokens</span><span class="p">;</span> <span class="o">*</span><span class="n">it_token</span> <span class="o">!=</span> <span class="n">NULL</span><span class="p">;</span> <span class="o">++</span><span class="n">it_token</span><span class="p">)</span>
+    <span class="n">printf</span><span class="p">(</span><span class="s2">&quot;</span><span class="si">%s</span><span class="s2">, &quot;</span><span class="p">,</span> <span class="o">*</span><span class="n">it_token</span><span class="p">);</span>
+  <span class="n">printf</span><span class="p">(</span><span class="s2">&quot;]</span><span class="se">\n</span><span class="s2">&quot;</span><span class="p">);</span>
+  <span class="k">return</span> <span class="mi">0</span><span class="p">;</span>
+<span class="p">}</span>
+
+<span class="nb">int</span> <span class="n">main</span><span class="p">(</span><span class="nb">int</span> <span class="n">argc</span><span class="p">,</span> <span class="n">char</span> <span class="o">**</span><span class="n">argv</span><span class="p">)</span> <span class="p">{</span>
+  <span class="k">assert</span><span class="p">(</span><span class="n">argc</span><span class="o">&gt;</span><span class="mi">1</span><span class="p">);</span>
+  <span class="k">for</span><span class="p">(</span><span class="nb">int</span> <span class="n">i</span> <span class="o">=</span> <span class="mi">1</span><span class="p">;</span> <span class="n">i</span> <span class="o">&lt;</span> <span class="n">argc</span><span class="p">;</span> <span class="n">i</span><span class="o">++</span><span class="p">)</span>
+    <span class="k">assert</span><span class="p">(</span><span class="n">arg_in_expected_tokens</span><span class="p">(</span><span class="n">argv</span><span class="p">[</span><span class="n">i</span><span class="p">],</span> <span class="n">expected_tokens</span><span class="p">));</span>
+  <span class="n">printf</span><span class="p">(</span><span class="s2">&quot;Tests: Passed</span><span class="se">\n</span><span class="s2">&quot;</span><span class="p">);</span>
+  <span class="n">exit</span><span class="p">(</span><span class="mi">0</span><span class="p">);</span>
+<span class="p">}</span>
+</code></pre></div>
+
+<div class="codehilite"><pre><span></span><code>Overwriting permutations.c
+</code></pre></div>
+
+<div class="codehilite"><pre><span></span><code>%%bash
 gcc ./permutations.c -g -Werror -o permutations
-</code></pre>
+</code></pre></div>
+
 <p>Finally, use bash shell scripting to input all inputs, line by line, to the C programm, so that each test is verified.</p>
-<pre><code class="language-bash">%%bash
-echo &quot;&quot; &gt; permutations.out
-cat permutations.in | while read line
-do
-  ./permutations $line &gt;&gt; permutations.out
-done
-</code></pre>
-<pre><code class="language-python">%cat permutations.out
-</code></pre>
-<pre><code>Tests: Passed
-Tests: Passed
-Tests: Passed
-Tests: Passed
-Tests: Passed
-Tests: Passed
-</code></pre>
+<div class="codehilite"><pre><span></span><code>%%bash
+<span class="nb">echo</span> <span class="s2">&quot;&quot;</span> &gt; permutations.out
+cat permutations.in <span class="p">|</span> <span class="k">while</span> <span class="nb">read</span> line
+<span class="k">do</span>
+  ./permutations <span class="nv">$line</span> &gt;&gt; permutations.out
+<span class="k">done</span>
+</code></pre></div>
+
+<div class="codehilite"><pre><span></span><code><span class="o">%</span><span class="n">cat</span> <span class="n">permutations</span><span class="o">.</span><span class="n">out</span>
+</code></pre></div>
+
+<div class="codehilite"><pre><span></span><code><span class="n">Tests</span><span class="o">:</span><span class="w"> </span><span class="n">Passed</span><span class="w"></span>
+<span class="n">Tests</span><span class="o">:</span><span class="w"> </span><span class="n">Passed</span><span class="w"></span>
+<span class="n">Tests</span><span class="o">:</span><span class="w"> </span><span class="n">Passed</span><span class="w"></span>
+<span class="n">Tests</span><span class="o">:</span><span class="w"> </span><span class="n">Passed</span><span class="w"></span>
+<span class="n">Tests</span><span class="o">:</span><span class="w"> </span><span class="n">Passed</span><span class="w"></span>
+<span class="n">Tests</span><span class="o">:</span><span class="w"> </span><span class="n">Passed</span><span class="w"></span>
+</code></pre></div>
+
 <p>If you're developing in Linux, you can even use <a href="http://valgrind.org/">Valgrind</a> to automatically detect many memory management and threading bugs, and profile your programs in detail.</p></div>
             </div>
         </div>
@@ -226,6 +236,8 @@ Tests: Passed
                 shortcuts = {"help": 191, "next": 78, "previous": 80, "search": 83};
         </script>
         <script src="../js/base.js"></script>
+        <script src="https://cdn.jsdelivr.net/npm/mathjax@2/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+        <script src="../mathjaxhelper.js"></script>
         <script src="../search/main.js"></script>
 
         <div class="modal" id="mkdocs_search_modal" tabindex="-1" role="dialog" aria-labelledby="searchModalLabel" aria-hidden="true">
