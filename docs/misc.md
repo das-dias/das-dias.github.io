@@ -1,4 +1,4 @@
-This is a collection of interesting tools, sandboxes and projects I end up doing when I want to learn new things about programming (and more specifically scientific-programming), IC Design and developing my own tools for EDA.
+This is a collection of interesting tools, sandboxes and projects I end up doing when I want to learn new things about programming (and more specifically scientific-programming), IC Design how EDA tools for IC design work and can be innovated.
 
 Hope you find something that you would like to try for yourself!  
 
