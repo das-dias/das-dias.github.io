@@ -1,4 +1,10 @@
-# Introduction: Hello World!
+This is a collection of interesting tools, sandboxes and projects I end up doing when I want to learn new things about programming, and more specifically scientific-programming.  
+
+Hope you find something that you would like to try for yourself!  
+
+# Programming in C-lang in Jupyter Notebooks
+
+## Introduction: Hello World!
 
 Start by writting your C-lang file:
 
@@ -52,7 +58,7 @@ Now, we can finally execute our C code from Jupyter.
 
     Hello World from C in Jupyter!
 
-# Testing the C program: Python scripting
+## Testing the C program: Python scripting
 
 We can now take advantage of having a documentation system with shell and Python scripting capabilities to quickly develop input testing files to run multiple test cases against the C program. This effectively automates the unit testing of the C program.
 
