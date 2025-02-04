@@ -37,14 +37,6 @@ tD
 ```
 
 
-
-
-    array([0.00e+00, 1.00e-05, 2.00e-05, ..., 9.98e-03, 9.99e-03, 1.00e-02],
-          shape=(1001,))
-
-
-
-
 ```python
 # define the signals
 Amp1 = 1
@@ -54,14 +46,6 @@ phase1_rad = np.deg2rad(phase1)
 x1 = Amp1*np.sin(2*np.pi*f1*tD + phase1_rad)
 x1
 ```
-
-
-
-
-    array([ 0.00000000e+00,  6.27905195e-02,  1.25333234e-01, ...,
-           -1.25333234e-01, -6.27905195e-02, -2.44929360e-15], shape=(1001,))
-
-
 
 
 ```python
@@ -75,16 +59,9 @@ ax.legend()
 plt.show()
 ```
 
-    /var/folders/vv/xctyh4bd2td6k2w_gvh_t2vr0000gn/T/ipykernel_53824/2618568274.py:7: UserWarning: No artists with labels found to put in legend.  Note that artists whose label start with an underscore are ignored when legend() is called with no argument.
-      ax.legend()
-
-
-
     
-![png](signal_converters/signal_converters/practical_class_1_files/practical_class_1_5_1.png)
+![png](./signal_converters/practical_class_1_files/practical_class_1_5_1.png)
     
-
-
 
 ```python
 # changing the frequency of the signal
@@ -98,14 +75,6 @@ x2
 ```
 
 
-
-
-    array([ 0.00000000e+00,  3.14107591e-02,  6.27905195e-02, ...,
-           -6.27905195e-02, -3.14107591e-02, -1.22464680e-15], shape=(1001,))
-
-
-
-
 ```python
 # visualize the signals
 fig, ax = plt.subplots(1,1, figsize = (10,4))
@@ -115,17 +84,9 @@ ax.set_ylabel("Voltage (V)")
 ax.set_xlabel("Time (s)")
 ax.legend()
 plt.show()
-```
+```  
 
-    /var/folders/vv/xctyh4bd2td6k2w_gvh_t2vr0000gn/T/ipykernel_53824/878274926.py:7: UserWarning: No artists with labels found to put in legend.  Note that artists whose label start with an underscore are ignored when legend() is called with no argument.
-      ax.legend()
-
-
-
-    
-![png](signal_converters/practical_class_1_files/practical_class_1_7_1.png)
-    
-
+![png](./signal_converters/practical_class_1_files/practical_class_1_7_1.png)  
 
 
 ```python
@@ -172,7 +133,7 @@ plt.show()
 
 
     
-![png](signal_converters/practical_class_1_files/practical_class_1_10_0.png)
+![png](./signal_converters/practical_class_1_files/practical_class_1_10_0.png)
     
 
 
@@ -266,7 +227,7 @@ fig.tight_layout()
 
 
     
-![png](signal_converters/practical_class_1_files/practical_class_1_14_0.png)
+![png](./signal_converters/practical_class_1_files/practical_class_1_14_0.png)
     
 
 
@@ -293,20 +254,9 @@ ax.set_xlabel('Samples')
 ax.set_ylabel('Window Amplitude')
 plt.plot(window)
 ```
-
-
-
-
-    [<matplotlib.lines.Line2D at 0x12a231a90>]
-
-
-
-
     
-![png](signal_converters/practical_class_1_files/practical_class_1_16_1.png)
+![png](./signal_converters/practical_class_1_files/practical_class_1_16_1.png)
     
-
-
 
 ```python
 # spectral analysis using fft - fast fourier transform
@@ -360,7 +310,7 @@ fig.tight_layout()
 
 
     
-![png](signal_converters/practical_class_1_files/practical_class_1_18_0.png)
+![png](./signal_converters/practical_class_1_files/practical_class_1_18_0.png)
     
 
 
@@ -432,7 +382,7 @@ fig.tight_layout()
 
 
     
-![png](signal_converters/practical_class_1_files/practical_class_1_20_0.png)
+![png](./signal_converters/practical_class_1_files/practical_class_1_20_0.png)
     
 
 
@@ -480,7 +430,7 @@ fig.tight_layout()
 
 
     
-![png](signal_converters/practical_class_1_files/practical_class_1_21_0.png)
+![png](./signal_converters/practical_class_1_files/practical_class_1_21_0.png)
     
 
 
@@ -521,7 +471,7 @@ fig.tight_layout()
 
 
     
-![png](signal_converters/practical_class_1_files/practical_class_1_22_0.png)
+![png](./signal_converters/practical_class_1_files/practical_class_1_22_0.png)
     
 
 
@@ -543,5 +493,3 @@ fig.tight_layout()
 
     mv: rename ./practical_class_1_files to ../docs/markdown/practical_class_1_files: Directory not empty
 
-
-<p>
