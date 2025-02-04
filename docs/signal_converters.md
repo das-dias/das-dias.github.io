@@ -151,16 +151,18 @@ From the above signal representations, two conclusions can be made:
 Any signal processing chain, or signal conversion chain should always be differential, in which the processed signals feature a phase of 180 º between each other. Differential signals enable the natural cancellation of the even harmonic components of the signal, significantly improving the linearity of the signal at the output of the signal processign chain.
 </p>
 
-Demo:
-<p align="justify">Given the signal: </p> 
+Demo:  
+Given the signal:
 
-$$s(t) = a_1 *sin(2\pi f_1t + \phi_1) + [a_2 *sin(2\pi f_1t + \phi_2)]^2 + [a_3 *sin(2\pi f_1t + \phi_3)]^3$$
+
+$$ s(t) = a_1 *sin(2\pi f_1t + \phi_1 ) + (a_2*sin(2\pi f_1t + \phi_2 ))^2 + (a_3 *sin(2\pi f_1t + \phi_3 ))^3 $$
+
 
 where: $f_2 = 2f_1$ and $f_3=3f_1$
 
 The differential rendition of this signal would give us:
 
-$$s(t) - s(t+180º) = 2a_1*sin(2\pi f_1t + \phi_1) + \frac{4a_3^2}{3}*sin(2\pi 3f_1t + \phi_3) + s_{DC}$$
+$$ s(t) - s(t+180º) = 2a_1*sin(2\pi f_1t + \phi_1) + \frac{4a_3^2}{3}*sin(2\pi 3f_1t + \phi_3) + s_{DC} $$
 
 <p align="justify">
 As it is possible to observe, the even harmonic components are cancelled, and thus the distortion is reduced.
@@ -320,7 +322,7 @@ fig.tight_layout()
 To perform a more accurate simulation of the signal converters that are going to be studied in this course, a superposition of noise to the processed signal is inevitable and required. The process of quantizing an ideal signal without any supperposed noise will inevitably add a quantization error to the signal, as seen in the following equation.
 </p>
 
-$$ s_Q(t) = s(t) + \epsilon_Q(t) \hspace{10pt} (1)$$
+$$ s_Q(t) = s(t) + \epsilon_Q(t) \hspace{10pt} (1) $$
 
 where $\epsilon_Q(t)$ is the quantization error, $s_Q(t)$ is the quantized signal and $s(t)$ is the processed signal.
 
@@ -328,7 +330,7 @@ where $\epsilon_Q(t)$ is the quantization error, $s_Q(t)$ is the quantized signa
 However, in reality all analog signals are subject to some form of noise. If the processed signal features a given level of noise power superposed to it, and the signal converter/quantizer features an high-enough quantization precision, the quantization error can actually be well approximated by white noise, as seen in (2). White noise is present throughout all the spectrum of both the signal and the quantizing system. It features a constant power spectral density throughout the system's operation spectrum, and as such it is very easy to model through a uniform distribution.
 </p>
 
-$$s_Q(t) = (x(t) + n(t)) + \epsilon_Q(t) = x(t) + v_{NQ}(t) \hspace{10pt} (2)$$
+$$ s_Q(t) = (x(t) + n(t)) + \epsilon_Q(t) = x(t) + v_{NQ}(t) \hspace{10pt} (2) $$
 
 where $x(t)$ is the processed signal, $n(t)$ is the noise superposed to the processed signal and $v_{NQ}(t)$ is the quantization white noise approximated by the sum of $n(t)$ and $\epsilon_Q(t)$.
 
@@ -552,7 +554,7 @@ object-oriented programming approach by defining a DAC object with
 a "convert" method.
 </p>
 
-$$V_{OUT}(D_{in}) = base_{10}\{D_{in}\}*V_{LSB}\hspace{10 pt} (1)$$
+$$ V_{OUT}(D_{in}) = base_{10}\{D_{in}\}*V_{LSB}\hspace{10 pt} (1) $$
 
 where $D_{in}$ is the input binary word of the DAC, $V_{LSB}$ is the Least Significant Bit step voltage and $V_{OUT}$ is the output voltage of the DAC.
 
@@ -647,7 +649,7 @@ object-oriented programming approach by defining a DAC object with
 a "convert" method.
 </p>
 
-$$D_{OUT}(V_{in}, f_{Round}) = base_2\{f_{Round}(V_{in}/V_{LSB})\} \hspace{10 pt} (2)$$
+$$ D_{OUT}(V_{in}, f_{Round}) = base_2\{f_{Round}(V_{in}/V_{LSB})\} \hspace{10 pt} (2) $$
 
 where $V_{in}$ is the input voltage of the ADC, $V_{LSB}$ is the Least Significant Bit step voltage and $D_{OUT}$ is the output digital code of the ADC. $f_{Round}$ is the rounding function that the ADC implements in practice, and this function can be one of three possible solutions: 
 <ul>
@@ -816,11 +818,11 @@ To accurately measure the linear error of DACs it is only necessary to observe t
 The Gain Error of the DAC is directly related to both the End of Scale and Offset Errors of the DAC and is derived from them. The errors are measured in LSB units.
 </p>
 
-$$\epsilon_{OFF} = \frac{V_{OUT}'[T_0] - V_{OUT}[T_0]}{V_{LSB}} \hspace{4 pt} [LSB] \hspace{10 pt} (1)$$
+$$ \epsilon_{OFF} = \frac{V_{OUT}'[T_0] - V_{OUT}[T_0]}{V_{LSB}} \hspace{4 pt} [LSB] \hspace{10 pt} (1) $$
 
-$$\epsilon_{EOS} = \frac{V_{OUT}'[T_{2^N - 1}] - V_{OUT}[T_{2^N - 1}]}{V_{LSB}} \hspace{4 pt} [LSB] \hspace{10 pt} (2)$$
+$$ \epsilon_{EOS} = \frac{V_{OUT}'[T_{2^N - 1}] - V_{OUT}[T_{2^N - 1}]}{V_{LSB}} \hspace{4 pt} [LSB] \hspace{10 pt} (2) $$
 
-$$GER_{[\%]} = \left(\frac{V_{OUT}'[T_{2^N - 1}] - V_{OUT}'[T_{0}]}{V_{OUT}[T_{2^N - 1}] - V_{OUT}[T_{0}]} - 1\right)\times100 \hspace{10 pt} (3)$$
+$$ GER_{[\%]} = \left(\frac{V_{OUT}'[T_{2^N - 1}] - V_{OUT}'[T_{0}]}{V_{OUT}[T_{2^N - 1}] - V_{OUT}[T_{0}]} - 1\right)\times100 \hspace{10 pt} (3) $$
 
 where $V_{OUT}[T_i]$ and $V_{OUT}'[T_i]$ is the output voltage of the ideal DAC and real DAC at the $i^{th}$ transition, respectively.
 
@@ -1166,7 +1168,7 @@ Analogously to the DAC section, the non-linear errors of converters can come in 
 The DNL and INL are measured in LSB units. The DNL provides a method of locally observing how much each step size changes in each transition voltage. The INL on the other hand is the accumulation of the DNL up until the respective transition, and enables the measurement of the global transition voltage step-size variability throughout every transition of the transfer function. In ADCs, the INL and DNL, as well as any other kind of error, are measured in the horizontal axis, where the voltage unit is. Eq. (7) presents the actual measured least significant bit step voltage of the ADC.
 </p>
 
-$$ V_{LSB}' = \frac{V_{T}'[2^N - 1] - V_{T}'[1]}{2^N - 2} \hspace{4 pt} [V] \hspace{10 pt} (7)$$
+$$ V_{LSB}' = \frac{V_{T}'[2^N - 1] - V_{T}'[1]}{2^N - 2} \hspace{4 pt} [V] \hspace{10 pt} (7) $$
 
 $$ DNL[n] = \frac{V_{T}'[n+1] - V_{T}'[n]}{V_{LSB}'} \hspace{4 pt} [LSB], n\in [0, 2^N-3] \hspace{10 pt} (8) $$
 
@@ -1226,3 +1228,631 @@ fig.tight_layout()
     
 ![png](./signal_converters/practical_class_3_files/practical_class_3_21_0.png)
     
+
+# Noise modelling
+
+<p align="justify">
+Noise is a very important factor in the design of a system. It is important to know how much noise is generated by a system and how much noise is introduced into the system by the surrounding environment/systems. This practical class covers how to model noise in a converter, and what are the impacts of the several sources of noise in the overall performance.
+</p>
+
+<p align="justify">
+There are three primary noise sources in a converter:
+<ul>
+    <li>Quantization Noise (Quantization Error Noise model aproximated by a uniform distribution)</li>
+    <li>Gaussian Noise (Innevitable source of noise, in the form of thermal, quantic and other electromagnetic phenomena happening in the circuit blocks)
+    <ul>
+        <li>Thermal Noise</li>
+        <li>Shot Noise</li>
+    </ul>
+    </li>
+    <li>Jitter Noise (Phase Noise generated by the random switching time stamps of the switches in the converter)</li>
+</ul>
+</p>
+
+<p align="justify">
+The complete model of a Analog-to-Analog converter signal chain is presented in the figure below, including the noise sources and the noise propagation through the system.
+
+<p align="center">
+<img src="./imgs/total_output_noise.png" width="400">
+</p>
+
+</p>
+
+
+```python
+import numpy as np
+from scipy.constants import k
+from numpy.random import uniform, normal # import uniform and normal probability distributions to represent noise
+import matplotlib.pyplot as plt
+import seaborn as sns
+
+import scienceplots
+#sns.set_theme()
+#sns.set_palette('colorblind')
+
+from utils import bin2dec, dec2bin, ideal_dac, ideal_adc, nonideal_adc
+
+plt.style.use(['science', 'notebook'])
+
+%matplotlib inline
+```
+
+
+```python
+# define the number of simulation points
+Np = 1000
+# define the frequency of the sampling clock
+Fclk = 100e3 # Hz
+# define the time base
+dt = 1/Fclk
+tD = np.arange(0, Np*dt, dt)
+```
+
+## Jitter Noise Modelling 
+
+<p align="justify">
+As stated before, jitter noise can be thought of a representation of the time uncertainty at which the sampling switches sampled an analog signal. The uncertainty at which the time the sampled was taken will introduce an error on the value of the sampled signal, at the corresponding sampling instant. 
+</p>
+
+<p align="center">
+<img src="./imgs/jitter_noise.png" width=400>
+</p>
+
+The sampled signal error can be represented by:
+$$ s[n] = s(n*T_S + \Delta t_j) = s(n*T_S) + \epsilon_s$$
+
+Considering a sinusoidal signal s(t) given by:
+
+$$ s(t) = A \hspace{2 pt} sin(2\pi f_S t + \phi) $$
+
+
+<p align="justify">
+then using a first order taylor series aproximation of the sampled sinusoidal signal, we can obtain the contribution of the jitter noise to the error of the sampled signal:
+</p>
+
+$$ s[n] = A \hspace{2 pt} sin(2\pi f_S (nT_S + \Delta t_j)) \approx A \hspace{2 pt} sin(2\pi f_S (nT_S)) + A 2\pi f_S \Delta t_j \hspace{2 pt} cos(2\pi f_S (nT_S) ) $$
+
+<p align="juustify">
+The power of the reuslting signal can be separated into two main components, the power of the signal and the power of the jitter noise:
+</p>
+
+$$ P = P_s + P_j = \frac{A^2}{2} + \frac{A^2}{2}f_S^24\pi^2\sigma_t^2 $$
+
+where $\sigma_t$ is the standard deviation of the random variable with normal distribution modelling the time uncertainty error $\Delta t_j$ - referred to as jitter -, $f_S$ is the sampling frequency and $A$ is the amplitude of the analog signal being sampled.
+
+
+```python
+# let us create an ideal adc featuring jitter noise
+# define the adc
+nbit = 10
+vref = 1
+vlsb = vref/(2**nbit)
+# define the input signal
+A1 = vref/2 # V
+f1 = 1e3 # Hz
+# setup the input signal frequency to behold 
+# coherent sampling
+f1 = np.round(f1/Fclk* Np)*Fclk/Np # Hz
+ph1 = 0 # rad
+
+mV = 1e-3 # V
+dc_level = vref/2
+
+# setup the jitter noise
+sig_t = 1e-7# sigma_t
+jitter_stdev = A1*Fclk*sig_t*2*np.pi # jitter amplitude = jitter standard deviation
+jitter_noise = jitter_stdev*normal(0, jitter_stdev, Np)
+si = A1*np.sin(2*np.pi*f1*tD + ph1) + dc_level + jitter_noise
+# define the dout 
+dout = np.round(si / vlsb).astype(int)
+```
+
+
+```python
+# observe the jitter noise probability density function
+fig, ax = plt.subplots(1,1, figsize=(4,4))
+freq = int(1)
+v_scale = mV
+sns.histplot(jitter_noise, ax=ax, stat="probability", bins=10, kde=True)
+x_ticks = ax.get_xticks()
+ax.set_xticklabels([f"{val/v_scale:.1f}" for val in x_ticks[::freq]])
+ax.set_ylabel("Probability")
+ax.set_title("Normal Distribution - Jitter Noise")
+ax.set_xlabel("Jitter Noise - Std. Dev (mV)")
+```
+
+    /var/folders/vv/xctyh4bd2td6k2w_gvh_t2vr0000gn/T/ipykernel_55844/3403075116.py:7: UserWarning: set_ticklabels() should only be used with a fixed number of ticks, i.e. after set_ticks() or using a FixedLocator.
+      ax.set_xticklabels([f"{val/v_scale:.1f}" for val in x_ticks[::freq]])
+
+
+
+
+
+    Text(0.5, 0, 'Jitter Noise - Std. Dev (mV)')
+
+
+
+
+    
+![png](./signal_converters/practical_class_5_files/practical_class_5_8_2.png)
+    
+
+
+
+```python
+t_scale = 1e-3 # ms
+# observe dout and s3
+fig, ax = plt.subplots(2, 1, figsize=(10, 4))
+ax[0].plot(tD/t_scale, si, color="b", linewidth=2)
+ax[0].set_ylabel("Input Signal (V)")    
+ax[1].plot(tD/t_scale, dout, color="b", linewidth=2)
+ax[1].set_xlabel("Time (ms)")
+ax[1].set_ylabel("Output Code")
+ax[0].grid(True)
+ax[1].grid(True)
+ax[0].set_title("Input signal and output code")
+```
+
+
+
+
+    Text(0.5, 1.0, 'Input signal and output code')
+
+
+
+
+    
+![png](./signal_converters/practical_class_5_files/practical_class_5_9_1.png)
+    
+
+
+
+```python
+# compute the snr of the adc
+f_scale = 1e3
+p_scale = 1
+
+virt_zero = 1e-30
+
+fD = np.fft.fftshift(np.fft.fftfreq(Np, dt))
+# compute the fft of the dout signal 
+dout_f = np.abs(np.fft.fftshift(np.fft.fft(dout) / Np))
+dout_p = (dout_f*dout_f)
+dout_p[dout_p == 0] = virt_zero
+dout_db = 10*np.log10(dout_p)
+```
+
+
+```python
+# observe the spectrum
+fig, ax = plt.subplots(1,1, figsize=(10,4))
+ax.plot(
+    fD[fD >= 0]/f_scale, dout_db[fD >= 0]/p_scale,
+    color="gray",
+    marker="None",   
+)
+ax.grid(True)
+ax.set_xlabel("Frequency (KHz)")
+ax.set_ylabel("Dout (dB)")
+fig.tight_layout()
+ax.set_title("Dout Frequency Spectrum - Jitter Noise Superposition")
+```
+
+
+
+
+    Text(0.5, 1.0, 'Dout Frequency Spectrum - Jitter Noise Superposition')
+
+
+
+
+    
+![png](./signal_converters/practical_class_5_files/practical_class_5_11_1.png)
+    
+
+
+
+```python
+# compute the snr of the adc
+# snr computation 
+bins = 1
+
+fDp = fD[fD>=0]
+dout_p_fp = dout_p[fD>=0]
+
+fin_bin = fDp[np.argmin(np.abs(f1 - fDp))]
+
+p_in = np.sum(dout_p_fp[fDp == fin_bin][:bins]) # power of the signal
+
+# get an ideal spectrum
+ideal_spectrum = np.zeros(len(dout_p_fp))
+ideal_spectrum[fDp == fin_bin] = p_in
+
+# compute the noise spectrum, ignoring the dc component
+noise_spectrum = dout_p_fp - ideal_spectrum
+# compute the noise power of the spectrum
+noise = np.mean(noise_spectrum[bins:])
+snr = 10*np.log10(p_in/noise)
+print(f"Obtained SNR= {snr:.2f} dB")
+```
+
+    Obtained SNR= 77.74 dB
+
+
+
+## Gaussian Noise Sources - Thermal Noise
+
+<p align="justify">
+The circuit blocks that constitute a converter usually include a resistors, capacitors, an amplifier, a comparator, a latch or any other form of CMOS-based circuit block, to perform bit conversions. As passive devices and transistors operate in normal conditions, they dissipate power in the form of heat, while transistors are also subjected to random quantum tunneling effects regarding the gate-accumulated electric charges that break the dielectric, passing from and to the transistor channel. The need arises then to model these effects into palpable random variables that superpose the input/output signal of A/D and D/A converters. Because thermal noise is the strongest of the described noise sources and is present in all converter architectures that are going to be described, only thermal noise will be modelled in this section.
+</p>
+
+<p align="justify">
+The thermal noise associated with a given component is directly proportional to its impedance. The higher the impedance, the higher will be the thermal noise superposed to the processed signal.
+</p>
+
+<b align="left">Power spectral density of Resistor-associated Thermal Noise (votlage variance per hertz/bandwidth):</b>
+$$ \langle v^2_{T} \rangle = 4 k_B T_{(K)} R \hspace{4 pt} [V^2/Hz]$$ 
+
+
+<b align="left">Power spectral density of a Capacitor-associated Thermal Noise (votlage variance per hertz/bandwidth):</b>
+
+$$ \langle v^2_{T} \rangle = \frac{ k_B T_{(K)} }{ C } \hspace{4 pt} [V^2/Hz]$$ 
+
+<b align="left">Power spectral density of a CMOS Transistor channel-associated Thermal Noise (seen at the gate) (votlage variance per hertz/bandwidth):</b>
+
+$$ \langle v^2_{T} \rangle = \frac{ \gamma k_B T_{(K)} }{ g_m } \hspace{4 pt} [V^2/Hz]$$ 
+
+where $ \gamma $ is a technology parameter associated with quantum tunneling effects.
+
+
+```python
+# consider an ideal adc converting an input signal superposed by thermal noise
+
+# let us create an ideal adc featuring jitter noise
+# define the adc
+nbit = 10
+vref = 1
+vlsb = vref/(2**nbit)
+# define the input signal
+A2 = vref/2 # V
+f2 = 1e3 # Hz
+# setup the input signal frequency to behold 
+# coherent sampling
+f2 = np.round(f2/Fclk* Np)*Fclk/Np # Hz
+# signal bandwidth
+BW = f2*2
+ph2 = 0 # rad
+
+mV = 1e-3 # V
+dc_level = vref/2
+
+# setup the thermal noise
+# consider the input signal passing through a sample and hold 
+# switch - capacitor circuit, considering a switch 
+# with an on resistance of 1kOhm and a capacitor with 
+# 100 fF
+# resistance
+R = 1e3 
+# capacitance
+C = 0.1e-12 # 0.1 pF
+# temperature celsius
+T_cels = 85 # in a circuit operating at 85 degrees celsius
+# temperature kelvin
+T_kelv = T_cels + 273.15
+# noise voltage variance
+vn_t_var = 4*k*T_kelv*R*BW + BW*k*T_kelv/C
+vn_t_std = np.sqrt(vn_t_var)
+thermal_noise = normal(0, vn_t_std, Np)
+si = A2*np.sin(2*np.pi*f2*tD + ph2) + dc_level + thermal_noise
+# define the dout 
+dout = np.round(si / vlsb).astype(int)
+```
+
+
+```python
+# observe the thermal noise probability density function
+fig, ax = plt.subplots(1,1, figsize=(4,4))
+freq = int(1)
+v_scale = mV
+sns.histplot(thermal_noise, ax=ax, stat="probability", bins=10, kde=True)
+x_ticks = ax.get_xticks()
+ax.set_xticklabels([f"{val/v_scale:.1f}" for val in x_ticks[::freq]])
+ax.set_ylabel("Probability")
+ax.set_title("Normal Distribution - Thermal Noise")
+ax.set_xlabel("Thermal Noise - Std. Dev (mV)")
+```
+
+    /var/folders/vv/xctyh4bd2td6k2w_gvh_t2vr0000gn/T/ipykernel_55844/1511684446.py:7: UserWarning: set_ticklabels() should only be used with a fixed number of ticks, i.e. after set_ticks() or using a FixedLocator.
+      ax.set_xticklabels([f"{val/v_scale:.1f}" for val in x_ticks[::freq]])
+
+
+
+
+
+    Text(0.5, 0, 'Thermal Noise - Std. Dev (mV)')
+
+
+
+
+    
+![png](./signal_converters/practical_class_5_files/practical_class_5_17_2.png)
+    
+
+
+
+```python
+t_scale = 1e-3 # ms
+# observe dout and s3
+fig, ax = plt.subplots(2, 1, figsize=(10, 4))
+ax[0].plot(tD/t_scale, si, color="b", linewidth=2)
+ax[0].set_ylabel("Input Signal (V)")    
+ax[1].plot(tD/t_scale, dout, color="b", linewidth=2)
+ax[1].set_xlabel("Time (ms)")
+ax[1].set_ylabel("Output Code")
+ax[0].grid(True)
+ax[1].grid(True)
+ax[0].set_title("Input signal and output code")
+```
+
+
+
+
+    Text(0.5, 1.0, 'Input signal and output code')
+
+
+
+
+    
+![png](./signal_converters/practical_class_5_files/practical_class_5_18_1.png)
+    
+
+
+
+```python
+# compute the snr of the adc
+f_scale = 1e3
+p_scale = 1
+
+virt_zero = 1e-30
+
+fD = np.fft.fftshift(np.fft.fftfreq(Np, dt))
+# compute the fft of the dout signal 
+dout_f = np.abs(np.fft.fftshift(np.fft.fft(dout) / Np))
+dout_p = (dout_f*dout_f)
+dout_p[dout_p == 0] = virt_zero
+dout_db = 10*np.log10(dout_p)
+```
+
+
+```python
+# observe the spectrum
+fig, ax = plt.subplots(1,1, figsize=(10,4))
+ax.plot(
+    fD[fD >= 0]/f_scale, dout_db[fD >= 0]/p_scale,
+    color="gray",
+    marker="None",   
+)
+ax.grid(True)
+ax.set_xlabel("Frequency (KHz)")
+ax.set_ylabel("Dout (dB)")
+fig.tight_layout()
+ax.set_title("Dout Frequency Spectrum - Thermal Noise Superposition")
+```
+
+
+
+
+    Text(0.5, 1.0, 'Dout Frequency Spectrum - Thermal Noise Superposition')
+
+
+
+
+    
+![png](./signal_converters/practical_class_5_files/practical_class_5_20_1.png)
+    
+
+
+
+```python
+# compute the snr of the adc
+# snr computation 
+bins = 1
+
+fDp = fD[fD>=0]
+dout_p_fp = dout_p[fD>=0]
+
+fin_bin = fDp[np.argmin(np.abs(f2 - fDp))]
+p_in = np.sum(dout_p_fp[fDp == fin_bin][:bins]) # power of the signal
+
+# get an ideal spectrum
+ideal_spectrum = np.zeros(len(dout_p_fp))
+ideal_spectrum[fDp == fin_bin] = p_in
+
+# compute the noise spectrum, ignoring the dc component
+noise_spectrum = dout_p_fp - ideal_spectrum
+# compute the noise power of the spectrum
+noise = np.mean(noise_spectrum[bins:])
+snr = 10*np.log10(p_in/noise)
+print(f"Obtained SNR= {snr:.2f} dB")
+```
+
+    Obtained SNR= 57.63 dB
+
+
+## Quantization Noise Modelling
+
+<p align="justify">
+Each conversion of a signal converter system is prone to <b>quantization error</b>, once the converter parses the signal between the digital and analog domain using a discrete quantization step (Vlsb). As such, each converter signal sample can present an error between [-Vlsb/2 ; Vlsb/2]. Because all systems are subjected to noise, the signal is always superposed by random gaussian noise, and this noise is also converted with the signal in the process of parsing from digital to analog domains. If the superposed noise of the signal doesn't surpass the threshold of |Vlsb/2| level, than the sufficiently random nature of the converted analog signal enables <b>quantization error</b> to be well approximated by white noise - a random noise variable with a uniform distribution of probability - becoming <b>Quantization Noise</b>.
+</p>
+
+
+```python
+# define the adc
+nbit = 10
+vref = 1 
+vlsb = vref/(2**nbit)
+# define the input signal
+A3 = vref/2 # V
+f3 = 1e3 # Hz
+# setup the input signal frequency to behold 
+# coherent sampling
+f3 = np.round(f3/Fclk* Np)*Fclk/Np # Hz
+ph3 = 0 # rad
+mV = 1e-3 # V
+dc_level = vref/2
+s3 = A3*np.sin(2*np.pi*f3*tD + ph3) + dc_level
+# compute the quantization error
+p_nq = vlsb**2 / 12 # V**2
+vnq = np.sqrt(p_nq) # V
+# define the input signal with quantization error
+vnq_t = uniform(-vnq, vnq, Np) # V
+s3 = s3 + vnq_t
+# define the dout 
+dout = np.round(s3 / vlsb).astype(int)
+```
+
+
+```python
+# observe the quantization noise probability density function
+fig, ax = plt.subplots(1,1, figsize=(4,4))
+freq = int(1)
+v_scale = mV
+sns.histplot(vnq_t, ax=ax, stat="probability", bins=10, kde=True)
+x_ticks = ax.get_xticks()
+ax.set_xticklabels([f"{val/v_scale:.1f}" for val in x_ticks[::freq]])
+ax.set_ylabel("Probability")
+ax.set_title("Uniform Distribution - Quantization Noise")
+ax.set_xlabel("Quantization Noise - Std. Dev (mV)")
+```
+
+    /var/folders/vv/xctyh4bd2td6k2w_gvh_t2vr0000gn/T/ipykernel_55844/4039833531.py:7: UserWarning: set_ticklabels() should only be used with a fixed number of ticks, i.e. after set_ticks() or using a FixedLocator.
+      ax.set_xticklabels([f"{val/v_scale:.1f}" for val in x_ticks[::freq]])
+
+
+
+
+
+    Text(0.5, 0, 'Quantization Noise - Std. Dev (mV)')
+
+
+
+
+    
+![png](./signal_converters/practical_class_5_files/practical_class_5_24_2.png)
+    
+
+
+
+```python
+
+# observe dout and s3
+fig, ax = plt.subplots(2, 1, figsize=(10, 4))
+ax[0].plot(tD, s3, color="b", linewidth=2)
+ax[0].set_ylabel("Input Signal (V)")    
+ax[1].plot(tD, dout, color="b", linewidth=2)
+ax[1].set_xlabel("Time (s)")
+ax[1].set_ylabel("Output Code")
+ax[0].grid(True)
+ax[1].grid(True)
+ax[0].set_title("Input signal and output code")
+```
+
+
+
+
+    Text(0.5, 1.0, 'Input signal and output code')
+
+
+
+
+    
+![png](./signal_converters/practical_class_5_files/practical_class_5_25_1.png)
+    
+
+
+
+```python
+f_scale = 1e3
+p_scale = 1
+fD = np.fft.fftshift(np.fft.fftfreq(Np, dt))
+
+new_zero = 1e-30
+
+# compute the fft of the dout signal 
+dout_f = np.abs(np.fft.fftshift(np.fft.fft(dout) / Np))
+dout_p = (dout_f*dout_f)
+dout_p[dout_p == 0] = new_zero # trick to prevent log10 from raising exceptions
+dout_db = 10*np.log10(dout_p)
+
+```
+
+
+```python
+# compute the snr of the adc
+# snr computation 
+bins = 1
+
+fDp = fD[fD>=0]
+dout_p_fp = dout_p[fD>=0]
+
+fin_bin = fDp[np.argmin(np.abs(f3 - fDp))]
+
+p_in = np.sum(dout_p_fp[fDp == fin_bin][:bins]) # power of the signal
+
+# get an ideal spectrum
+ideal_spectrum = np.zeros(len(dout_p_fp))
+ideal_spectrum[fDp == fin_bin] = p_in
+
+# compute the noise spectrum, ignoring the dc component
+noise_spectrum = dout_p_fp - ideal_spectrum
+# compute the noise power of the spectrum
+noise = np.mean(noise_spectrum[bins:])
+snr = 10*np.log10(p_in/noise)
+print(f"Obtained SNR= {snr:.2f} dB")
+```
+
+    Obtained SNR= 88.74 dB
+
+
+IMPORTANT NOTE: The obtained SNR considering quantization noise sets the theoretical maximum of the signal-to-noise ratio of the converter.
+
+
+```python
+# observe the spectrum
+fig, ax = plt.subplots(1,1, figsize=(10,4))
+ax.plot(
+    fD[fD >= 0]/f_scale, dout_db[fD >= 0]/p_scale,
+    color="gray",
+    marker="None",   
+)
+ax.grid(True)
+ax.set_xlabel("Frequency (KHz)")
+ax.set_ylabel("Dout (dB)")
+fig.tight_layout()
+ax.set_title("Dout Frequency Spectrum - Quantization Noise Superposition")
+```
+
+
+
+
+    Text(0.5, 1.0, 'Dout Frequency Spectrum - Quantization Noise Superposition')
+
+
+
+
+    
+![png](./signal_converters/practical_class_5_files/practical_class_5_29_1.png)
+    
+
+
+## Total Output Noise  
+
+
+<p align="justify">
+When modelling a converter, the identified "independant" noise soruces must be superposed to the converter's output signal, in order to obtain an accurate measurement of its SNR and linearity, as exemplified in the image below regarding the high-level model of an ideal ADC with superposed noise sources to develop a non-ideal model.
+</p>
+
+<p align="center">
+<img src="./imgs/total_output_noise.png" width=400>
+</p>
+

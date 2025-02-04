@@ -17,16 +17,19 @@ theme:
   name: slate
   locale: en
   highlightjs: true
-  hljs_languages:
-    - yaml
-    - toml
-    - c
-    - python
+  hljs_style: night-owl
+  hljs_style_dark: github-dark
+  #hljs_languages:
+  #  - yaml
+  #  - toml
+  #  - c
+  #  - python
 
 markdown_extensions:
   - extra
   - tables
   - fenced_code
+  - codehilite
 
 extra_javascript:
   - https://cdn.jsdelivr.net/npm/mathjax@2/MathJax.js?config=TeX-AMS-MML_HTMLorMML
