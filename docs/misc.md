@@ -1,8 +1,8 @@
-This is a collection of interesting tools, sandboxes and projects I end up doing when I want to learn new things about programming, and more specifically scientific-programming.  
+This is a collection of interesting tools, sandboxes and projects I end up doing when I want to learn new things about programming (and more specifically scientific-programming), IC Design and developing my own tools for EDA.
 
 Hope you find something that you would like to try for yourself!  
 
-# Programming in C-lang in Jupyter Notebooks
+# Programming in C-lang with Jupyter Notebooks
 
 ## Introduction: Hello World!
 
