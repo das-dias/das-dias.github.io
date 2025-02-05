@@ -141,6 +141,19 @@
             </li>
               </ul>
             </li>
+            
+            <li class="nav-item" data-level="1"><a href="#modelling-of-resistive-dacs-at-element-level" class="nav-link">Modelling of Resistive DACs at element level</a>
+              <ul class="nav flex-column">
+            <li class="nav-item" data-level="2"><a href="#modelling-of-a-thermometer-code-dac" class="nav-link">Modelling of a Thermometer Code DAC</a>
+              <ul class="nav flex-column">
+              </ul>
+            </li>
+            <li class="nav-item" data-level="2"><a href="#modelling-of-a-binary-weighted-resistor-dac" class="nav-link">Modelling of a Binary Weighted Resistor DAC</a>
+              <ul class="nav flex-column">
+              </ul>
+            </li>
+              </ul>
+            </li>
         </ul>
     </div>
 </div></div>
@@ -1673,6 +1686,802 @@ When modelling a converter, the identified "independant" noise soruces must be s
 
 <p align="center">
 <img src="./imgs/total_output_noise.png" width=400>
+</p>
+
+<h1 id="modelling-of-resistive-dacs-at-element-level">Modelling of Resistive DACs at element level</h1>
+<div class="codehilite"><pre><span></span><code><span class="kn">from</span> <span class="nn">functools</span> <span class="kn">import</span> <span class="n">partial</span>
+
+<span class="c1"># mathematical computing</span>
+<span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
+<span class="kn">import</span> <span class="nn">seaborn</span> <span class="k">as</span> <span class="nn">sns</span> <span class="c1"># to observe the noise signal&#39;s histogram</span>
+
+<span class="n">sns</span><span class="o">.</span><span class="n">set_theme</span><span class="p">()</span>
+<span class="n">sns</span><span class="o">.</span><span class="n">set_palette</span><span class="p">(</span><span class="s2">&quot;colorblind&quot;</span><span class="p">)</span>
+
+<span class="kn">from</span> <span class="nn">numpy.random</span> <span class="kn">import</span> <span class="n">uniform</span><span class="p">,</span> <span class="n">normal</span> <span class="c1"># random numbers fitted into a uniform distribution</span>
+<span class="c1"># plotting</span>
+<span class="kn">import</span> <span class="nn">matplotlib.pyplot</span> <span class="k">as</span> <span class="nn">plt</span>
+<span class="c1"># import the models and utilities functions</span>
+<span class="kn">from</span> <span class="nn">utils</span> <span class="kn">import</span> <span class="n">ideal_dac</span><span class="p">,</span> <span class="n">ideal_adc</span><span class="p">,</span> <span class="n">nonideal_adc</span><span class="p">,</span> <span class="n">dec2bin</span><span class="p">,</span> <span class="n">bin2dec</span>
+
+<span class="o">%</span><span class="n">matplotlib</span> <span class="n">inline</span>
+</code></pre></div>
+
+<h2 id="modelling-of-a-thermometer-code-dac">Modelling of a Thermometer Code DAC</h2>
+<p align="center">
+    <img src="./imgs/thermometer_dac.png" alt="thermometer-dac" width="300">
+</p>
+
+<div class="codehilite"><pre><span></span><code><span class="c1"># set up the DAC parameters</span>
+<span class="n">vref</span> <span class="o">=</span> <span class="mi">1</span> <span class="c1"># V</span>
+<span class="n">nbits</span> <span class="o">=</span> <span class="mi">8</span> <span class="c1"># number of bits</span>
+<span class="n">vlsb</span> <span class="o">=</span> <span class="n">vref</span> <span class="o">/</span> <span class="p">(</span><span class="mi">2</span><span class="o">**</span><span class="n">nbits</span><span class="p">)</span> <span class="c1"># V</span>
+<span class="c1"># number of simulation points</span>
+<span class="n">Np</span> <span class="o">=</span> <span class="mf">1e6</span>
+<span class="c1"># define the time base</span>
+<span class="n">Fs</span> <span class="o">=</span> <span class="mf">1e9</span> <span class="c1"># Hz</span>
+<span class="n">Ts</span> <span class="o">=</span> <span class="mi">1</span><span class="o">/</span><span class="n">Fs</span> <span class="c1"># s</span>
+<span class="n">tD</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">arange</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span><span class="n">Np</span><span class="p">)</span><span class="o">*</span><span class="n">Ts</span><span class="p">;</span> <span class="c1"># (0:Np-1) == np.arange(0,Np)</span>
+<span class="c1"># setup the input codes</span>
+<span class="n">A1</span> <span class="o">=</span> <span class="n">vref</span><span class="o">/</span><span class="mi">2</span>
+<span class="n">f1</span> <span class="o">=</span> <span class="mf">1e3</span> <span class="c1"># Hz</span>
+<span class="n">ph1</span> <span class="o">=</span> <span class="mi">0</span> <span class="c1"># rad</span>
+<span class="n">ofst</span> <span class="o">=</span> <span class="mf">0.0</span>
+<span class="n">si</span> <span class="o">=</span> <span class="n">A1</span><span class="o">*</span><span class="n">np</span><span class="o">.</span><span class="n">sin</span><span class="p">(</span><span class="mi">2</span><span class="o">*</span><span class="n">np</span><span class="o">.</span><span class="n">pi</span><span class="o">*</span><span class="n">f1</span><span class="o">*</span><span class="n">tD</span> <span class="o">+</span> <span class="n">ph1</span><span class="p">)</span> <span class="o">+</span> <span class="n">ofst</span> <span class="o">+</span> <span class="n">vref</span><span class="o">/</span><span class="mi">2</span>
+<span class="c1"># get the codes from the ideal DAC</span>
+<span class="n">incodes</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">round</span><span class="p">(</span><span class="n">si</span><span class="o">/</span><span class="n">vlsb</span><span class="p">)</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="nb">int</span><span class="p">)</span>
+<span class="c1"># represent the input signal and codes</span>
+<span class="n">fig</span><span class="p">,</span> <span class="n">ax</span> <span class="o">=</span> <span class="n">plt</span><span class="o">.</span><span class="n">subplots</span><span class="p">(</span><span class="mi">2</span><span class="p">,</span><span class="mi">1</span><span class="p">,</span> <span class="n">figsize</span><span class="o">=</span><span class="p">(</span><span class="mi">4</span><span class="p">,</span><span class="mi">4</span><span class="p">))</span>
+<span class="n">ax</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span><span class="n">tD</span><span class="p">,</span> <span class="n">si</span><span class="p">,</span> <span class="s1">&#39;b&#39;</span><span class="p">,</span> <span class="n">label</span><span class="o">=</span><span class="s1">&#39;input signal&#39;</span><span class="p">)</span>
+<span class="n">ax</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">set_xlabel</span><span class="p">(</span><span class="s1">&#39;time (s)&#39;</span><span class="p">)</span>
+<span class="n">ax</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">set_ylabel</span><span class="p">(</span><span class="s1">&#39;voltage (V)&#39;</span><span class="p">)</span>
+<span class="n">ax</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">legend</span><span class="p">()</span>
+<span class="n">ax</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span><span class="n">tD</span><span class="p">,</span> <span class="n">incodes</span><span class="p">,</span> <span class="s1">&#39;r&#39;</span><span class="p">,</span> <span class="n">label</span><span class="o">=</span><span class="s1">&#39;input codes&#39;</span><span class="p">)</span>
+<span class="n">ax</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">set_xlabel</span><span class="p">(</span><span class="s1">&#39;time (s)&#39;</span><span class="p">)</span>
+<span class="n">ax</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">set_ylabel</span><span class="p">(</span><span class="s1">&#39;codes&#39;</span><span class="p">)</span>
+<span class="n">ax</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">legend</span><span class="p">()</span>
+<span class="n">ax</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">set_xlim</span><span class="p">([</span><span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="o">/</span><span class="p">(</span><span class="n">f1</span><span class="p">)])</span>
+<span class="n">ax</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">set_xlim</span><span class="p">([</span><span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="o">/</span><span class="p">(</span><span class="n">f1</span><span class="p">)])</span>
+<span class="n">ax</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">grid</span><span class="p">(</span><span class="kc">True</span><span class="p">);</span> <span class="n">ax</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">grid</span><span class="p">(</span><span class="kc">True</span><span class="p">)</span>
+</code></pre></div>
+
+<p><img alt="png" src="practical_class_6_files/practical_class_6_3_0.png" /></p>
+<div class="codehilite"><pre><span></span><code><span class="c1"># model the resistor ladder</span>
+<span class="n">ru</span> <span class="o">=</span> <span class="mi">100</span> <span class="c1"># ohm - unit resistance</span>
+<span class="n">R</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">ones</span><span class="p">(</span><span class="mi">2</span><span class="o">**</span><span class="n">nbits</span><span class="p">)</span><span class="o">*</span><span class="n">ru</span>
+<span class="c1"># resistance mismatch in ohm, following a normal distribution</span>
+<span class="n">u_err</span> <span class="o">=</span> <span class="mf">0.0</span>
+<span class="n">u_std</span> <span class="o">=</span> <span class="mf">0.05</span> <span class="c1"># 5% of the unit resistance for a semiconductor resistor</span>
+<span class="n">r_err</span> <span class="o">=</span> <span class="n">normal</span><span class="p">(</span><span class="n">u_err</span><span class="p">,</span> <span class="n">u_std</span><span class="p">,</span> <span class="mi">2</span><span class="o">**</span><span class="n">nbits</span><span class="p">)</span>
+<span class="n">R</span> <span class="o">=</span> <span class="n">R</span> <span class="o">+</span> <span class="n">r_err</span><span class="o">*</span><span class="n">ru</span>
+<span class="c1"># show the resistor values</span>
+<span class="n">fig</span><span class="p">,</span> <span class="n">ax</span> <span class="o">=</span> <span class="n">plt</span><span class="o">.</span><span class="n">subplots</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span><span class="mi">1</span><span class="p">,</span> <span class="n">figsize</span><span class="o">=</span><span class="p">(</span><span class="mi">4</span><span class="p">,</span><span class="mi">4</span><span class="p">))</span>
+<span class="n">sns</span><span class="o">.</span><span class="n">histplot</span><span class="p">(</span><span class="n">R</span><span class="p">,</span> <span class="n">ax</span><span class="o">=</span><span class="n">ax</span><span class="p">,</span> <span class="n">stat</span><span class="o">=</span><span class="s2">&quot;density&quot;</span><span class="p">,</span> <span class="n">kde</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+<span class="n">ax</span><span class="o">.</span><span class="n">set_xlabel</span><span class="p">(</span><span class="s1">&#39;resistor value (ohm)&#39;</span><span class="p">)</span>
+<span class="n">ax</span><span class="o">.</span><span class="n">set_ylabel</span><span class="p">(</span><span class="s1">&#39;probability density&#39;</span><span class="p">)</span>
+<span class="n">ax</span><span class="o">.</span><span class="n">grid</span><span class="p">(</span><span class="kc">True</span><span class="p">)</span>
+<span class="n">ax</span><span class="o">.</span><span class="n">set_title</span><span class="p">(</span><span class="s1">&#39;resistor values distribution&#39;</span><span class="p">)</span>
+</code></pre></div>
+
+<div class="codehilite"><pre><span></span><code>Text(0.5, 1.0, &#39;resistor values distribution&#39;)
+</code></pre></div>
+
+<p><img alt="png" src="practical_class_6_files/practical_class_6_4_1.png" /></p>
+<div class="codehilite"><pre><span></span><code><span class="c1"># compute the DAC output voltage for each input code, considering the errors in the resistors</span>
+<span class="n">codes</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">arange</span><span class="p">(</span><span class="mi">2</span><span class="o">**</span><span class="n">nbits</span><span class="p">)</span>
+<span class="n">vout_nonideal</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="n">np</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">R</span><span class="p">[:</span><span class="n">code</span><span class="p">])</span><span class="o">/</span><span class="n">np</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">R</span><span class="p">)</span> <span class="k">for</span> <span class="n">code</span> <span class="ow">in</span> <span class="n">codes</span><span class="p">])</span>
+<span class="c1"># observe the DAC transfer function</span>
+<span class="n">fig</span><span class="p">,</span> <span class="n">ax</span> <span class="o">=</span> <span class="n">plt</span><span class="o">.</span><span class="n">subplots</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span><span class="mi">1</span><span class="p">,</span> <span class="n">figsize</span><span class="o">=</span><span class="p">(</span><span class="mi">4</span><span class="p">,</span><span class="mi">4</span><span class="p">))</span>
+<span class="n">ax</span><span class="o">.</span><span class="n">step</span><span class="p">(</span><span class="n">codes</span><span class="p">,</span><span class="n">vout_nonideal</span><span class="p">,</span> <span class="s1">&#39;b&#39;</span><span class="p">,</span> <span class="n">label</span><span class="o">=</span><span class="s1">&#39;DAC output&#39;</span><span class="p">)</span>
+<span class="n">ax</span><span class="o">.</span><span class="n">set_xlabel</span><span class="p">(</span><span class="s1">&#39;input codes&#39;</span><span class="p">)</span>
+<span class="n">ax</span><span class="o">.</span><span class="n">set_ylabel</span><span class="p">(</span><span class="s1">&#39;output voltage (V)&#39;</span><span class="p">)</span>
+<span class="n">ax</span><span class="o">.</span><span class="n">legend</span><span class="p">()</span>
+<span class="n">ax</span><span class="o">.</span><span class="n">grid</span><span class="p">(</span><span class="kc">True</span><span class="p">)</span>
+<span class="n">ax</span><span class="o">.</span><span class="n">set_title</span><span class="p">(</span><span class="s1">&#39;DAC transfer function&#39;</span><span class="p">)</span>
+</code></pre></div>
+
+<div class="codehilite"><pre><span></span><code>Text(0.5, 1.0, &#39;DAC transfer function&#39;)
+</code></pre></div>
+
+<p><img alt="png" src="practical_class_6_files/practical_class_6_5_1.png" /></p>
+<div class="codehilite"><pre><span></span><code><span class="c1"># compute the DNL and INL of the DAC featuring the resistor mismatch</span>
+<span class="n">vlsb_measured</span> <span class="o">=</span> <span class="p">(</span><span class="n">vout_nonideal</span><span class="p">[</span><span class="mi">2</span><span class="o">**</span><span class="n">nbits</span> <span class="o">-</span> <span class="mi">1</span><span class="p">]</span> <span class="o">-</span> <span class="n">vout_nonideal</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span><span class="o">/</span><span class="p">(</span><span class="mi">2</span><span class="o">**</span><span class="n">nbits</span> <span class="o">-</span> <span class="mi">1</span><span class="p">)</span>
+<span class="n">dnl</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">diff</span><span class="p">(</span><span class="n">vout_nonideal</span><span class="p">)</span><span class="o">/</span><span class="n">vlsb_measured</span> <span class="o">-</span> <span class="mi">1</span>
+<span class="n">inl</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="mi">0</span><span class="p">]</span> <span class="o">+</span> <span class="n">np</span><span class="o">.</span><span class="n">cumsum</span><span class="p">(</span><span class="n">dnl</span><span class="p">)</span><span class="o">.</span><span class="n">tolist</span><span class="p">())</span>
+<span class="k">assert</span> <span class="nb">len</span><span class="p">(</span><span class="n">dnl</span><span class="p">)</span> <span class="o">==</span> <span class="mi">2</span><span class="o">**</span><span class="n">nbits</span> <span class="o">-</span> <span class="mi">1</span>
+<span class="k">assert</span> <span class="nb">len</span><span class="p">(</span><span class="n">inl</span><span class="p">)</span> <span class="o">==</span> <span class="mi">2</span><span class="o">**</span><span class="n">nbits</span>
+<span class="c1"># plot the DNL and INL</span>
+<span class="n">fig</span><span class="p">,</span> <span class="n">ax</span> <span class="o">=</span> <span class="n">plt</span><span class="o">.</span><span class="n">subplots</span><span class="p">(</span><span class="mi">2</span><span class="p">,</span><span class="mi">1</span><span class="p">,</span> <span class="n">figsize</span><span class="o">=</span><span class="p">(</span><span class="mi">4</span><span class="p">,</span><span class="mi">4</span><span class="p">))</span>
+<span class="n">ax</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">step</span><span class="p">(</span><span class="n">codes</span><span class="p">[</span><span class="mi">1</span><span class="p">:],</span> <span class="n">dnl</span><span class="p">,</span> <span class="s1">&#39;b&#39;</span><span class="p">,</span> <span class="n">label</span><span class="o">=</span><span class="s1">&#39;DNL&#39;</span><span class="p">)</span>
+<span class="n">ax</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">set_xlabel</span><span class="p">(</span><span class="s1">&#39;input codes&#39;</span><span class="p">)</span>
+<span class="n">ax</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">set_ylabel</span><span class="p">(</span><span class="s1">&#39;DNL&#39;</span><span class="p">)</span>
+<span class="n">ax</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">legend</span><span class="p">()</span>
+<span class="n">ax</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">grid</span><span class="p">(</span><span class="kc">True</span><span class="p">)</span>
+<span class="n">ax</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">step</span><span class="p">(</span><span class="n">codes</span><span class="p">,</span> <span class="n">inl</span><span class="p">,</span> <span class="s1">&#39;r&#39;</span><span class="p">,</span> <span class="n">label</span><span class="o">=</span><span class="s1">&#39;INL&#39;</span><span class="p">)</span>
+<span class="n">ax</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">set_xlabel</span><span class="p">(</span><span class="s1">&#39;input codes&#39;</span><span class="p">)</span>
+<span class="n">ax</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">set_ylabel</span><span class="p">(</span><span class="s1">&#39;INL&#39;</span><span class="p">)</span>
+<span class="n">ax</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">legend</span><span class="p">()</span>
+<span class="n">ax</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">grid</span><span class="p">(</span><span class="kc">True</span><span class="p">)</span>
+</code></pre></div>
+
+<p><img alt="png" src="practical_class_6_files/practical_class_6_6_0.png" /></p>
+<p>As it is possible to observe, the DAC is sensitive to resistor mismatch, severely impacting its INL, which translates in vlasb errors when producing the output voltage. Let us now compute the effective resolution of 100 thermometer ladder DAC converters for a random resistor mismatch following a normal distribution, and check the histogram of the effective resolution of the DACs. This is a very common analysis to check the impact of device mismatch on the performance of a converter circuit.</p>
+<div class="codehilite"><pre><span></span><code><span class="c1"># generate several ladder circuits, with random resistance wheights every time, and observe the histogram of </span>
+<span class="c1"># the resolution of the DAC</span>
+<span class="n">ncircuits</span> <span class="o">=</span> <span class="mi">100</span>
+<span class="n">dac_res</span> <span class="o">=</span> <span class="p">[]</span> <span class="c1"># measure the effective resolution for each of the circuits</span>
+<span class="c1"># resistance mismatch in ohm, following a normal distribution</span>
+<span class="n">u_err</span> <span class="o">=</span> <span class="mf">0.0</span>
+<span class="n">u_std</span> <span class="o">=</span> <span class="mf">0.05</span> <span class="c1"># 5% of the unit resistance for a semiconductor resistor</span>
+<span class="k">for</span> <span class="n">circ</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">ncircuits</span><span class="p">):</span>
+    <span class="n">R</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">ones</span><span class="p">(</span><span class="mi">2</span><span class="o">**</span><span class="n">nbits</span><span class="p">)</span><span class="o">*</span><span class="n">ru</span>
+    <span class="n">r_err</span> <span class="o">=</span> <span class="n">normal</span><span class="p">(</span><span class="n">u_err</span><span class="p">,</span> <span class="n">u_std</span><span class="p">,</span> <span class="mi">2</span><span class="o">**</span><span class="n">nbits</span><span class="p">)</span>
+    <span class="n">R</span> <span class="o">=</span> <span class="n">R</span> <span class="o">+</span> <span class="n">r_err</span><span class="o">*</span><span class="n">ru</span>
+    <span class="n">codes</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">arange</span><span class="p">(</span><span class="mi">2</span><span class="o">**</span><span class="n">nbits</span><span class="p">)</span>
+    <span class="n">vout_nonideal</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="n">np</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">R</span><span class="p">[:</span><span class="n">code</span><span class="p">])</span><span class="o">/</span><span class="n">np</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">R</span><span class="p">)</span> <span class="k">for</span> <span class="n">code</span> <span class="ow">in</span> <span class="n">codes</span><span class="p">])</span>
+    <span class="n">vlsb_measured</span> <span class="o">=</span> <span class="p">(</span><span class="n">vout_nonideal</span><span class="p">[</span><span class="mi">2</span><span class="o">**</span><span class="n">nbits</span> <span class="o">-</span> <span class="mi">1</span><span class="p">]</span> <span class="o">-</span> <span class="n">vout_nonideal</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span><span class="o">/</span><span class="p">(</span><span class="mi">2</span><span class="o">**</span><span class="n">nbits</span> <span class="o">-</span> <span class="mi">1</span><span class="p">)</span>
+    <span class="n">dnl</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">diff</span><span class="p">(</span><span class="n">vout_nonideal</span><span class="p">)</span><span class="o">/</span><span class="n">vlsb_measured</span> <span class="o">-</span> <span class="mi">1</span>
+    <span class="n">inl</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="mi">0</span><span class="p">]</span> <span class="o">+</span> <span class="n">np</span><span class="o">.</span><span class="n">cumsum</span><span class="p">(</span><span class="n">dnl</span><span class="p">)</span><span class="o">.</span><span class="n">tolist</span><span class="p">())</span>
+    <span class="c1"># compute the effective number of bits of the DAC using the INL (once the lost bits can be compute by the </span>
+    <span class="c1"># difference between the minimum and maximum value of the INL)</span>
+    <span class="n">dac_linearity</span> <span class="o">=</span> <span class="n">nbits</span> <span class="o">-</span> <span class="n">np</span><span class="o">.</span><span class="n">log2</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">max</span><span class="p">(</span><span class="n">inl</span><span class="p">)</span> <span class="o">-</span> <span class="n">np</span><span class="o">.</span><span class="n">min</span><span class="p">(</span><span class="n">inl</span><span class="p">))</span>
+    <span class="n">dac_res</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">dac_linearity</span><span class="p">)</span>
+<span class="c1"># plot the histogram of the effective number of bits of the DAC</span>
+<span class="n">fig</span><span class="p">,</span> <span class="n">ax</span> <span class="o">=</span> <span class="n">plt</span><span class="o">.</span><span class="n">subplots</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span><span class="mi">1</span><span class="p">,</span> <span class="n">figsize</span><span class="o">=</span><span class="p">(</span><span class="mi">4</span><span class="p">,</span><span class="mi">4</span><span class="p">))</span>
+<span class="n">sns</span><span class="o">.</span><span class="n">histplot</span><span class="p">(</span><span class="n">dac_res</span><span class="p">,</span> <span class="n">ax</span><span class="o">=</span><span class="n">ax</span><span class="p">,</span> <span class="n">stat</span><span class="o">=</span><span class="s2">&quot;density&quot;</span><span class="p">,</span> <span class="n">kde</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+<span class="n">ax</span><span class="o">.</span><span class="n">set_xlabel</span><span class="p">(</span><span class="s1">&#39;effective number of bits&#39;</span><span class="p">)</span>
+<span class="n">ax</span><span class="o">.</span><span class="n">set_ylabel</span><span class="p">(</span><span class="s1">&#39;probability density function of each circuit&#39;</span><span class="p">)</span>
+<span class="n">ax</span><span class="o">.</span><span class="n">grid</span><span class="p">(</span><span class="kc">True</span><span class="p">)</span>
+<span class="n">ax</span><span class="o">.</span><span class="n">set_title</span><span class="p">(</span><span class="s1">&#39;DAC resolution distribution against resistor mismatch&#39;</span><span class="p">)</span>
+</code></pre></div>
+
+<div class="codehilite"><pre><span></span><code>Text(0.5, 1.0, &#39;DAC resolution distribution against resistor mismatch&#39;)
+</code></pre></div>
+
+<p><img alt="png" src="practical_class_6_files/practical_class_6_8_1.png" /></p>
+<p>Let us now consider the dynamic operation of the DAC. Let us assume that at the DAC's output voltage is charging a parasitic capacitor of 0.1 pF, and the DAC is clocked at 1 MHz. Naturally, due to the output node pole defined by its RC time constant, the output voltage will not change instantaneously, but will follow a step response. Three main questions arise:
+- 1 - How long does it take to charge the output capacitance to 95% of the final value of the output voltage?
+- 2 - What impact does the unitary resistances of the DAC have on the output voltage step response?
+- 3 - What impact do the switches have on the output voltage step response?
+- 
+Let us answer those questions in this section.</p>
+<p>The settling error can be computed through:
+$$
+\begin{align}
+\epsilon_{S} &amp;= \frac{V^*<em out="out">{out} - V</em>}{V_{out}} = e^{-\frac{T_{CLK}}{\tau}} \
+\end{align}
+$$</p>
+<p>where $V_{out} = V_{REF}\frac{R2}{R2 + R1}$ is the ideal output voltage at the end of the half-clock period, and $V^<em><em REF="REF">{out}(t) = V</em>\frac{R2}{R2 + R1}(1-e^{-\frac{t}{\tau}})$ is the actual observed final output voltage. The RC time constant of the output node is given by:
+$$
+\begin{align}
+\tau &amp;= (C_L + C_P)</em>( R1 // R2 + R_{SW}) \hspace{4pt} \text{(s)}
+\end{align}
+$$</p>
+<p>where $C_L$ is the load capacitance, $C_P$ is the node parasitic capacitance, $R1$ and $R2$ are the top and bottom equivalent resistances of the DAC ladder, and $R_{SW}$ is the switch ON resistance.</p>
+<div class="codehilite"><pre><span></span><code><span class="c1"># plot the ideal step response</span>
+<span class="n">vo</span> <span class="o">=</span> <span class="k">lambda</span> <span class="n">t_</span><span class="p">,</span> <span class="n">vr_</span><span class="p">,</span> <span class="n">r1_</span><span class="p">,</span> <span class="n">r2_</span><span class="p">,</span> <span class="n">tau_</span><span class="p">:</span> <span class="n">vr_</span><span class="o">*</span><span class="n">r2_</span><span class="o">/</span><span class="p">(</span><span class="n">r1_</span><span class="o">+</span><span class="n">r2_</span><span class="p">)</span><span class="o">*</span><span class="p">(</span><span class="mi">1</span> <span class="o">-</span> <span class="n">np</span><span class="o">.</span><span class="n">exp</span><span class="p">((</span><span class="o">-</span><span class="n">t_</span><span class="o">/</span><span class="n">tau_</span><span class="p">)))</span>
+<span class="c1"># compute the step respose for a transition between code 0 and code 1</span>
+<span class="n">fig</span><span class="p">,</span> <span class="n">ax</span> <span class="o">=</span> <span class="n">plt</span><span class="o">.</span><span class="n">subplots</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span><span class="mi">1</span><span class="p">,</span> <span class="n">figsize</span><span class="o">=</span><span class="p">(</span><span class="mi">4</span><span class="p">,</span><span class="mi">4</span><span class="p">))</span>
+<span class="n">CL</span> <span class="o">=</span> <span class="mf">1e-12</span> <span class="c1"># F - load capacitance</span>
+<span class="n">ru</span> <span class="o">=</span> <span class="mf">1e3</span> <span class="c1"># ohm - unit resistance</span>
+<span class="n">num_rus</span> <span class="o">=</span> <span class="mi">3</span>
+<span class="n">rus</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">arange</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="n">num_rus</span><span class="o">+</span><span class="mi">1</span><span class="p">)</span><span class="o">*</span><span class="n">ru</span>
+<span class="n">r_sw</span> <span class="o">=</span> <span class="mi">100</span> <span class="c1"># ohm - switch resistance</span>
+<span class="n">cp_sw</span> <span class="o">=</span> <span class="mf">0.01</span><span class="o">*</span><span class="n">CL</span> <span class="c1"># F - switch capacitance</span>
+<span class="n">fclk</span> <span class="o">=</span> <span class="mf">100e6</span> <span class="c1"># 100 MHz - clock frequency</span>
+<span class="n">colors</span> <span class="o">=</span> <span class="p">[</span><span class="s1">&#39;b&#39;</span><span class="p">,</span> <span class="s1">&#39;r&#39;</span><span class="p">,</span> <span class="s1">&#39;k&#39;</span><span class="p">,</span> <span class="s1">&#39;c&#39;</span><span class="p">,</span> <span class="s1">&#39;m&#39;</span><span class="p">,</span> <span class="s1">&#39;y&#39;</span><span class="p">,</span> <span class="s1">&#39;g&#39;</span><span class="p">]</span>
+<span class="k">for</span> <span class="n">ru</span><span class="p">,</span> <span class="n">color</span> <span class="ow">in</span> <span class="nb">zip</span><span class="p">(</span><span class="n">rus</span><span class="p">,</span> <span class="n">colors</span><span class="p">):</span>
+    <span class="n">R</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">ones</span><span class="p">(</span><span class="mi">2</span><span class="o">**</span><span class="n">nbits</span><span class="p">)</span><span class="o">*</span><span class="n">ru</span>
+    <span class="k">assert</span> <span class="nb">len</span><span class="p">(</span><span class="n">R</span><span class="p">)</span> <span class="o">==</span> <span class="mi">2</span><span class="o">**</span><span class="n">nbits</span>
+    <span class="n">req1</span> <span class="o">=</span> <span class="nb">sum</span><span class="p">(</span><span class="n">R</span><span class="p">[:</span><span class="o">-</span><span class="mi">1</span><span class="p">])</span> <span class="c1"># equivalent resistance of the top of the ladder for code 0</span>
+    <span class="n">req2</span> <span class="o">=</span> <span class="n">R</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span> <span class="c1"># equivalent resistance of the bottom of the ladder for code 1</span>
+    <span class="n">tclk</span> <span class="o">=</span> <span class="mi">1</span><span class="o">/</span><span class="n">fclk</span> <span class="c1"># s - clock period -&gt; maximum settling time</span>
+    <span class="n">tauu</span> <span class="o">=</span> <span class="p">(</span><span class="n">CL</span> <span class="o">+</span> <span class="n">cp_sw</span><span class="p">)</span><span class="o">*</span><span class="p">((</span><span class="n">req1</span><span class="o">*</span><span class="n">req2</span><span class="p">)</span><span class="o">/</span><span class="p">(</span><span class="n">req1</span><span class="o">+</span><span class="n">req2</span><span class="p">)</span> <span class="o">+</span> <span class="n">r_sw</span><span class="p">)</span> <span class="c1"># tau ~= (CL + Cp)*( R1//R2 + Rsw )</span>
+    <span class="n">vout_t</span> <span class="o">=</span> <span class="n">vo</span><span class="p">(</span><span class="n">tD</span><span class="p">,</span> <span class="n">vref</span><span class="p">,</span> <span class="n">req1</span><span class="p">,</span> <span class="n">req2</span><span class="p">,</span> <span class="n">tauu</span><span class="p">)</span>
+    <span class="c1"># compute stelling error</span>
+    <span class="n">err_set</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">exp</span><span class="p">(</span><span class="o">-</span><span class="n">tclk</span><span class="o">/</span><span class="n">tauu</span><span class="p">)</span> <span class="c1"># err _settling = [(vout - vout_ideal)/vout_ideal] = e^(-tclk/tau)</span>
+    <span class="n">err_set_pct</span> <span class="o">=</span> <span class="n">err_set</span><span class="o">*</span><span class="mi">100</span>
+    <span class="c1">#print(&#39;tau = {:.2e} s&#39;.format(tauu))</span>
+    <span class="c1">#print(&quot;tclk = {:.2e} s&quot;.format(tclk))</span>
+    <span class="c1">#print(&quot;tclk/tau = {:.2f}&quot;.format(tclk/tauu))</span>
+    <span class="c1">#print(&quot;tclk/Ts = {:.2f}&quot;.format(tclk/Ts))</span>
+    <span class="n">ax</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span><span class="n">tD</span><span class="p">,</span> <span class="n">vout_t</span><span class="o">/</span><span class="n">vlsb</span><span class="p">,</span> <span class="n">color</span><span class="p">,</span> <span class="n">label</span><span class="o">=</span><span class="s1">&#39;R = </span><span class="si">{:.1e}</span><span class="s1"> k&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">ru</span><span class="p">)</span><span class="o">+</span><span class="sa">r</span><span class="s1">&#39;$\Omega$&#39;</span>\
+        <span class="o">+</span> <span class="s1">&#39;</span><span class="se">\n</span><span class="s1">Settling Error = </span><span class="si">{:.2f}</span><span class="s1">%&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">err_set_pct</span><span class="p">))</span>
+<span class="n">ax</span><span class="o">.</span><span class="n">set_xlabel</span><span class="p">(</span><span class="s1">&#39;time (ns)&#39;</span><span class="p">)</span>
+<span class="n">ax</span><span class="o">.</span><span class="n">set_xticklabels</span><span class="p">(</span><span class="n">tD</span><span class="o">/</span><span class="mf">1e-9</span><span class="p">)</span>
+<span class="n">ax</span><span class="o">.</span><span class="n">set_ylabel</span><span class="p">(</span><span class="s1">&#39;voltage (LSBs)&#39;</span><span class="p">)</span>
+<span class="n">ax</span><span class="o">.</span><span class="n">grid</span><span class="p">(</span><span class="kc">True</span><span class="p">)</span>
+<span class="n">ax</span><span class="o">.</span><span class="n">legend</span><span class="p">()</span>
+<span class="n">ax</span><span class="o">.</span><span class="n">set_title</span><span class="p">(</span><span class="s1">&#39;step response for a transition</span><span class="se">\n</span><span class="s1"> between code 0 and code 1&#39;</span><span class="p">)</span>
+<span class="n">ax</span><span class="o">.</span><span class="n">set_xlim</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="n">tclk</span><span class="p">)</span>
+</code></pre></div>
+
+<div class="codehilite"><pre><span></span><code><span class="o">/</span><span class="k">var</span><span class="o">/</span><span class="n">folders</span><span class="o">/</span><span class="n">vv</span><span class="o">/</span><span class="n">xctyh4bd2td6k2w_gvh_t2vr0000gn</span><span class="o">/</span><span class="n">T</span><span class="o">/</span><span class="n">ipykernel_83439</span><span class="o">/</span><span class="mf">1943781312.</span><span class="n">py</span><span class="p">:</span><span class="mi">31</span><span class="p">:</span><span class="w"> </span><span class="n">UserWarning</span><span class="p">:</span><span class="w"> </span><span class="n">set_ticklabels</span><span class="p">()</span><span class="w"> </span><span class="n">should</span><span class="w"> </span><span class="n">only</span><span class="w"> </span><span class="n">be</span><span class="w"> </span><span class="n">used</span><span class="w"> </span><span class="n">with</span><span class="w"> </span><span class="n">a</span><span class="w"> </span><span class="n">fixed</span><span class="w"> </span><span class="n">number</span><span class="w"> </span><span class="n">of</span><span class="w"> </span><span class="n">ticks</span><span class="p">,</span><span class="w"> </span><span class="n">i</span><span class="o">.</span><span class="n">e</span><span class="o">.</span><span class="w"> </span><span class="n">after</span><span class="w"> </span><span class="n">set_ticks</span><span class="p">()</span><span class="w"> </span><span class="ow">or</span><span class="w"> </span><span class="n">using</span><span class="w"> </span><span class="n">a</span><span class="w"> </span><span class="n">FixedLocator</span><span class="o">.</span><span class="w"></span>
+<span class="w">  </span><span class="n">ax</span><span class="o">.</span><span class="n">set_xticklabels</span><span class="p">(</span><span class="n">tD</span><span class="o">/</span><span class="mf">1e-9</span><span class="p">)</span><span class="w"></span>
+
+
+
+
+
+<span class="p">(</span><span class="mf">0.0</span><span class="p">,</span><span class="w"> </span><span class="mf">1e-08</span><span class="p">)</span><span class="w"></span>
+</code></pre></div>
+
+<p><img alt="png" src="practical_class_6_files/practical_class_6_10_2.png" /></p>
+<div class="codehilite"><pre><span></span><code><span class="c1"># observe the delay of the DAC agains the code transition</span>
+<span class="n">codes</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">arange</span><span class="p">(</span><span class="mi">2</span><span class="o">**</span><span class="n">nbits</span><span class="p">)</span>
+<span class="n">ru</span> <span class="o">=</span> <span class="mf">1e3</span> <span class="c1"># ohm - unit resistance</span>
+<span class="n">R</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">ones</span><span class="p">(</span><span class="mi">2</span><span class="o">**</span><span class="n">nbits</span><span class="p">)</span><span class="o">*</span><span class="n">ru</span>
+<span class="n">tauu</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span>
+    <span class="p">(</span><span class="n">CL</span><span class="o">+</span><span class="n">cp_sw</span><span class="p">)</span><span class="o">*</span><span class="p">((</span><span class="n">np</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">R</span><span class="p">[:</span><span class="n">code</span><span class="p">])</span><span class="o">*</span><span class="n">np</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">R</span><span class="p">[</span><span class="n">code</span><span class="p">:]))</span><span class="o">/</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">R</span><span class="p">[:</span><span class="n">code</span><span class="p">])</span><span class="o">+</span><span class="n">np</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">R</span><span class="p">[</span><span class="n">code</span><span class="p">:]))</span> <span class="o">+</span> <span class="n">r_sw</span><span class="p">)</span> <span class="k">for</span> <span class="n">code</span> <span class="ow">in</span> <span class="n">codes</span><span class="p">[</span><span class="mi">1</span><span class="p">:]</span>
+<span class="p">])</span>
+<span class="n">fig</span><span class="p">,</span> <span class="n">ax</span> <span class="o">=</span> <span class="n">plt</span><span class="o">.</span><span class="n">subplots</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span><span class="mi">1</span><span class="p">,</span> <span class="n">figsize</span><span class="o">=</span><span class="p">(</span><span class="mi">4</span><span class="p">,</span><span class="mi">3</span><span class="p">))</span>
+<span class="n">ax</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span><span class="n">codes</span><span class="p">[</span><span class="mi">1</span><span class="p">:],</span> <span class="n">tauu</span><span class="o">/</span><span class="n">tclk</span><span class="p">,</span> <span class="s1">&#39;b&#39;</span><span class="p">,</span> <span class="n">label</span><span class="o">=</span><span class="s1">&#39;DAC delay&#39;</span><span class="p">)</span>
+<span class="n">ax</span><span class="o">.</span><span class="n">set_xlabel</span><span class="p">(</span><span class="s1">&#39;input codes&#39;</span><span class="p">)</span>
+<span class="n">ax</span><span class="o">.</span><span class="n">set_ylabel</span><span class="p">(</span><span class="sa">r</span><span class="s1">&#39;$\tau / T_</span><span class="si">{CLK}</span><span class="s1">$&#39;</span><span class="p">)</span>
+<span class="n">ax</span><span class="o">.</span><span class="n">legend</span><span class="p">()</span>
+<span class="n">ax</span><span class="o">.</span><span class="n">grid</span><span class="p">(</span><span class="kc">True</span><span class="p">)</span>
+<span class="n">ax</span><span class="o">.</span><span class="n">set_title</span><span class="p">(</span><span class="s1">&#39;DAC Output RC Delay vs. Input Code Transistion&#39;</span><span class="p">)</span>
+</code></pre></div>
+
+<div class="codehilite"><pre><span></span><code>Text(0.5, 1.0, &#39;DAC Output RC Delay vs. Input Code Transistion&#39;)
+</code></pre></div>
+
+<p><img alt="png" src="practical_class_6_files/practical_class_6_11_1.png" /></p>
+<div class="codehilite"><pre><span></span><code><span class="c1"># compute the static power dissipation of the DAC</span>
+<span class="n">ru</span> <span class="o">=</span> <span class="mf">1e3</span> <span class="c1"># ohm - unit resistance</span>
+<span class="n">R</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">ones</span><span class="p">(</span><span class="mi">2</span><span class="o">**</span><span class="n">nbits</span><span class="p">)</span><span class="o">*</span><span class="n">ru</span>
+<span class="n">PD</span> <span class="o">=</span> <span class="p">(</span><span class="n">vref</span><span class="o">**</span><span class="mi">2</span><span class="p">)</span><span class="o">/</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">R</span><span class="p">)</span><span class="o">*</span><span class="n">ru</span><span class="p">)</span> <span class="c1"># W - static power dissipation of the DAC</span>
+<span class="nb">print</span><span class="p">(</span><span class="s1">&#39;PD = </span><span class="si">{:.2f}</span><span class="s1"> uW&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">PD</span><span class="o">/</span><span class="mf">1e-6</span><span class="p">))</span>
+</code></pre></div>
+
+<div class="codehilite"><pre><span></span><code>PD = 3.91 uW
+</code></pre></div>
+
+<p>One conclusion that we can retrieve from the previous analysis is that in order to reduce the overall delay of the DAC, we should reduce the RC time constant of the output node by reducing the unitary resistance of the unit resistor of the ladder. However, the lower the unitary resistance, the higher will be the mismatch sensitivity of the DAC, as well as the total static dissipated power of the thermometer ladder DAC. </p>
+<p>This observation holds true in general, for all DAC and ADC architectures. The total dissipated power of converters will innevitably be higher when aiming for a converters that present a lower settling error and operate at faster conversion steps.</p>
+<h2 id="modelling-of-a-binary-weighted-resistor-dac">Modelling of a Binary Weighted Resistor DAC</h2>
+<p align="center">
+    <img src="./imgs/bin_weight_res_dac.png" alt="binary-weighted-resistor-dac" width="400">
+</p>
+
+<p align="justify">
+NOTE: B0 is most significant bit of the DAC, associated with the lowest resistor value in the resistor array,
+and subsequnetly to the highest voltage output change when the bit is toggled.
+</p>
+
+<div class="codehilite"><pre><span></span><code><span class="c1"># set up the DAC parameters</span>
+<span class="n">vref</span> <span class="o">=</span> <span class="o">-</span><span class="mi">1</span> <span class="c1"># V</span>
+<span class="n">vdd</span> <span class="o">=</span> <span class="mi">1</span> <span class="c1"># V</span>
+<span class="n">nbits</span> <span class="o">=</span> <span class="mi">8</span> <span class="c1"># number of bits</span>
+<span class="n">vlsb</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">abs</span><span class="p">(</span><span class="n">vref</span> <span class="o">/</span> <span class="p">(</span><span class="mi">2</span><span class="o">**</span><span class="n">nbits</span><span class="p">)</span> <span class="p">)</span> <span class="c1"># V</span>
+<span class="c1"># number of simulation points</span>
+<span class="n">Np</span> <span class="o">=</span> <span class="mf">1e6</span>
+<span class="c1"># define the time base</span>
+<span class="n">Fs</span> <span class="o">=</span> <span class="mf">1e9</span> <span class="c1"># Hz</span>
+<span class="n">Ts</span> <span class="o">=</span> <span class="mi">1</span><span class="o">/</span><span class="n">Fs</span> <span class="c1"># s</span>
+<span class="n">tD</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">arange</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span><span class="n">Np</span><span class="p">)</span><span class="o">*</span><span class="n">Ts</span><span class="p">;</span> <span class="c1"># (0:Np-1) == np.arange(0,Np)</span>
+<span class="c1"># setup the input codes</span>
+<span class="n">A1</span> <span class="o">=</span> <span class="n">vdd</span><span class="o">/</span><span class="mi">2</span>
+<span class="n">f1</span> <span class="o">=</span> <span class="mf">1e3</span> <span class="c1"># Hz</span>
+<span class="n">ph1</span> <span class="o">=</span> <span class="mi">0</span> <span class="c1"># rad</span>
+<span class="n">ofst</span> <span class="o">=</span> <span class="mf">0.0</span>
+<span class="n">si</span> <span class="o">=</span> <span class="n">A1</span><span class="o">*</span><span class="n">np</span><span class="o">.</span><span class="n">sin</span><span class="p">(</span><span class="mi">2</span><span class="o">*</span><span class="n">np</span><span class="o">.</span><span class="n">pi</span><span class="o">*</span><span class="n">f1</span><span class="o">*</span><span class="n">tD</span> <span class="o">+</span> <span class="n">ph1</span><span class="p">)</span> <span class="o">+</span> <span class="n">ofst</span> <span class="o">+</span> <span class="n">vdd</span><span class="o">/</span><span class="mi">2</span>
+<span class="c1"># get the codes from the ideal DAC</span>
+<span class="n">incodes</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">round</span><span class="p">(</span><span class="n">si</span><span class="o">/</span><span class="n">vlsb</span><span class="p">)</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="nb">int</span><span class="p">)</span>
+<span class="c1"># represent the input signal and codes</span>
+<span class="n">fig</span><span class="p">,</span> <span class="n">ax</span> <span class="o">=</span> <span class="n">plt</span><span class="o">.</span><span class="n">subplots</span><span class="p">(</span><span class="mi">2</span><span class="p">,</span><span class="mi">1</span><span class="p">,</span> <span class="n">figsize</span><span class="o">=</span><span class="p">(</span><span class="mi">4</span><span class="p">,</span><span class="mi">4</span><span class="p">))</span>
+<span class="n">ax</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span><span class="n">tD</span><span class="p">,</span> <span class="n">si</span><span class="p">,</span> <span class="s1">&#39;b&#39;</span><span class="p">,</span> <span class="n">label</span><span class="o">=</span><span class="s1">&#39;input signal&#39;</span><span class="p">)</span>
+<span class="n">ax</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">set_xlabel</span><span class="p">(</span><span class="s1">&#39;time (s)&#39;</span><span class="p">)</span>
+<span class="n">ax</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">set_ylabel</span><span class="p">(</span><span class="s1">&#39;voltage (V)&#39;</span><span class="p">)</span>
+<span class="n">ax</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">legend</span><span class="p">()</span>
+<span class="n">ax</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span><span class="n">tD</span><span class="p">,</span> <span class="n">incodes</span><span class="p">,</span> <span class="s1">&#39;r&#39;</span><span class="p">,</span> <span class="n">label</span><span class="o">=</span><span class="s1">&#39;input codes&#39;</span><span class="p">)</span>
+<span class="n">ax</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">set_xlabel</span><span class="p">(</span><span class="s1">&#39;time (s)&#39;</span><span class="p">)</span>
+<span class="n">ax</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">set_ylabel</span><span class="p">(</span><span class="s1">&#39;codes&#39;</span><span class="p">)</span>
+<span class="n">ax</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">legend</span><span class="p">()</span>
+<span class="n">ax</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">set_xlim</span><span class="p">([</span><span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="o">/</span><span class="p">(</span><span class="n">f1</span><span class="p">)])</span>
+<span class="n">ax</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">set_xlim</span><span class="p">([</span><span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="o">/</span><span class="p">(</span><span class="n">f1</span><span class="p">)])</span>
+<span class="n">ax</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">grid</span><span class="p">(</span><span class="kc">True</span><span class="p">);</span> <span class="n">ax</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">grid</span><span class="p">(</span><span class="kc">True</span><span class="p">)</span>
+</code></pre></div>
+
+<p><img alt="png" src="practical_class_6_files/practical_class_6_15_0.png" /></p>
+<div class="codehilite"><pre><span></span><code><span class="c1"># model the binary wheighted resistors</span>
+<span class="n">ru</span> <span class="o">=</span> <span class="mi">100</span> <span class="c1"># ohm - unit resistance</span>
+<span class="c1"># create the binary weighted resistors </span>
+<span class="n">R_ideal</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="n">ru</span><span class="o">*</span><span class="p">(</span><span class="mi">2</span><span class="o">**</span><span class="n">i</span><span class="p">)</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">nbits</span><span class="p">)])</span>
+<span class="c1"># resistance mismatch in ohm, following a normal distribution</span>
+<span class="n">u_err</span> <span class="o">=</span> <span class="mf">0.0</span>
+<span class="n">u_std</span> <span class="o">=</span> <span class="mf">0.05</span> <span class="c1"># 5% of the unit resistance for a semiconductor resistor</span>
+<span class="n">r_err</span> <span class="o">=</span> <span class="n">normal</span><span class="p">(</span><span class="n">u_err</span><span class="p">,</span> <span class="n">u_std</span><span class="p">,</span> <span class="n">nbits</span><span class="p">)</span>
+<span class="n">R</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="n">r</span> <span class="o">+</span> <span class="n">r_err</span><span class="p">[</span><span class="n">i</span><span class="p">]</span><span class="o">*</span><span class="n">r</span> <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="n">r</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">R_ideal</span><span class="p">)])</span>
+<span class="c1"># feedback resistor </span>
+<span class="n">rf</span> <span class="o">=</span> <span class="n">ru</span><span class="o">/</span><span class="mi">2</span>
+
+<span class="n">fig</span><span class="p">,</span> <span class="n">ax</span> <span class="o">=</span> <span class="n">plt</span><span class="o">.</span><span class="n">subplots</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span><span class="mi">1</span><span class="p">,</span> <span class="n">figsize</span><span class="o">=</span><span class="p">(</span><span class="mi">4</span><span class="p">,</span><span class="mi">4</span><span class="p">))</span>
+<span class="n">sns</span><span class="o">.</span><span class="n">histplot</span><span class="p">(</span><span class="n">r_err</span><span class="p">,</span> <span class="n">ax</span><span class="o">=</span><span class="n">ax</span><span class="p">,</span> <span class="n">stat</span><span class="o">=</span><span class="s2">&quot;density&quot;</span><span class="p">,</span> <span class="n">kde</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+<span class="n">ax</span><span class="o">.</span><span class="n">set_xlabel</span><span class="p">(</span><span class="s1">&#39;resistor std error (%)&#39;</span><span class="p">)</span>
+<span class="n">ax</span><span class="o">.</span><span class="n">set_ylabel</span><span class="p">(</span><span class="s1">&#39;probability density&#39;</span><span class="p">)</span>
+<span class="n">ax</span><span class="o">.</span><span class="n">grid</span><span class="p">(</span><span class="kc">True</span><span class="p">)</span>
+<span class="n">ax</span><span class="o">.</span><span class="n">set_title</span><span class="p">(</span><span class="s1">&#39;resistor values distribution&#39;</span><span class="p">)</span>
+</code></pre></div>
+
+<div class="codehilite"><pre><span></span><code>Text(0.5, 1.0, &#39;resistor values distribution&#39;)
+</code></pre></div>
+
+<p><img alt="png" src="practical_class_6_files/practical_class_6_16_1.png" /></p>
+<div class="codehilite"><pre><span></span><code><span class="c1"># convert the codes from decimal to binary,</span>
+<span class="c1"># and get the indexes of the resistor </span>
+<span class="c1"># conducting the current</span>
+<span class="n">codes</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">arange</span><span class="p">(</span><span class="mi">2</span><span class="o">**</span><span class="n">nbits</span><span class="p">)</span>
+<span class="n">incodes_bin</span> <span class="o">=</span> <span class="n">dec2bin</span><span class="p">(</span><span class="n">codes</span><span class="p">,</span> <span class="n">nbits</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="s2">&quot;codes : &quot;</span><span class="p">,</span> <span class="n">incodes_bin</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="s2">&quot;resistors : &quot;</span><span class="p">,</span> <span class="n">R</span><span class="p">)</span>
+
+<span class="sd">&quot;&quot;&quot;NOTE:</span>
+<span class="sd">The Most Significant Bit (MSB) is associated with the smallest resistor</span>
+<span class="sd">of the array in the DAC ( the unit resistor Ru ). This makes sense for </span>
+<span class="sd">a very simple reason: the MSB is associated with the highest voltage change in the </span>
+<span class="sd">DAC, and consequently it has to be associated with the highest change in the current </span>
+<span class="sd">flowing through the feedback resistor - which is true, once the lowest resistor of the DAC array</span>
+<span class="sd">will be the one generating the highest current.</span>
+<span class="sd">&quot;&quot;&quot;</span>
+
+<span class="c1"># get transconductances </span>
+<span class="n">G</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="mi">1</span><span class="o">/</span><span class="n">r</span> <span class="k">for</span> <span class="n">r</span> <span class="ow">in</span> <span class="n">R</span><span class="p">])</span>
+<span class="c1"># for each code, compute the output voltage</span>
+<span class="nb">print</span><span class="p">(</span><span class="n">R</span><span class="p">[</span><span class="n">incodes_bin</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">==</span> <span class="mi">1</span><span class="p">])</span>
+<span class="n">currents</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span>
+    <span class="n">vref</span><span class="o">*</span><span class="n">np</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">G</span><span class="p">[</span><span class="n">icodes</span> <span class="o">==</span> <span class="mi">1</span><span class="p">])</span> <span class="k">for</span> <span class="n">icodes</span> <span class="ow">in</span> <span class="n">incodes_bin</span>
+<span class="p">])</span>
+<span class="c1"># plot currents vs. codes</span>
+<span class="n">fig</span><span class="p">,</span> <span class="n">ax</span> <span class="o">=</span> <span class="n">plt</span><span class="o">.</span><span class="n">subplots</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span><span class="mi">1</span><span class="p">,</span> <span class="n">figsize</span><span class="o">=</span><span class="p">(</span><span class="mi">4</span><span class="p">,</span><span class="mi">3</span><span class="p">))</span>
+<span class="n">ax</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span><span class="n">codes</span><span class="p">,</span> <span class="n">currents</span><span class="p">,</span> <span class="s1">&#39;b&#39;</span><span class="p">,</span> <span class="n">label</span><span class="o">=</span><span class="s1">&#39;currents&#39;</span><span class="p">)</span>
+<span class="n">ax</span><span class="o">.</span><span class="n">set_xlabel</span><span class="p">(</span><span class="s1">&#39;codes&#39;</span><span class="p">)</span>
+<span class="n">ax</span><span class="o">.</span><span class="n">set_ylabel</span><span class="p">(</span><span class="s1">&#39;currents (A)&#39;</span><span class="p">)</span>
+<span class="n">ax</span><span class="o">.</span><span class="n">grid</span><span class="p">(</span><span class="kc">True</span><span class="p">)</span>
+<span class="n">ax</span><span class="o">.</span><span class="n">legend</span><span class="p">()</span>
+
+<span class="n">vout_nonideal</span> <span class="o">=</span> <span class="o">-</span><span class="n">currents</span><span class="o">*</span><span class="n">rf</span>
+</code></pre></div>
+
+<div class="codehilite"><pre><span></span><code>codes :  [[0 0 0 ... 0 0 0]
+ [0 0 0 ... 0 0 1]
+ [0 0 0 ... 0 1 0]
+ ...
+ [1 1 1 ... 1 0 1]
+ [1 1 1 ... 1 1 0]
+ [1 1 1 ... 1 1 1]]
+resistors :  [  103.89761329   208.86268787   425.05776991   837.72473922
+  1469.36913165  2893.90732342  6128.55060707 13684.86859828]
+[13684.86859828]
+</code></pre></div>
+
+<p><img alt="png" src="practical_class_6_files/practical_class_6_17_1.png" /></p>
+<div class="codehilite"><pre><span></span><code><span class="c1"># plot the trasnfer function of the DAC</span>
+<span class="n">fig</span><span class="p">,</span> <span class="n">ax</span> <span class="o">=</span> <span class="n">plt</span><span class="o">.</span><span class="n">subplots</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span><span class="mi">1</span><span class="p">,</span> <span class="n">figsize</span><span class="o">=</span><span class="p">(</span><span class="mi">4</span><span class="p">,</span><span class="mi">3</span><span class="p">))</span>
+<span class="n">ax</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span><span class="n">codes</span><span class="p">,</span> <span class="n">vout_nonideal</span><span class="p">,</span> <span class="s1">&#39;b&#39;</span><span class="p">,</span> <span class="n">label</span><span class="o">=</span><span class="s1">&#39;DAC transfer function&#39;</span><span class="p">)</span>
+<span class="n">ax</span><span class="o">.</span><span class="n">set_xlabel</span><span class="p">(</span><span class="s1">&#39;input codes&#39;</span><span class="p">)</span>
+<span class="n">ax</span><span class="o">.</span><span class="n">set_ylabel</span><span class="p">(</span><span class="s1">&#39;output voltage (V)&#39;</span><span class="p">)</span>
+<span class="n">ax</span><span class="o">.</span><span class="n">grid</span><span class="p">(</span><span class="kc">True</span><span class="p">)</span>
+<span class="n">ax</span><span class="o">.</span><span class="n">set_title</span><span class="p">(</span><span class="s1">&#39;Binary Weighted Resistor DAC Transfer Function&#39;</span><span class="p">)</span>
+</code></pre></div>
+
+<div class="codehilite"><pre><span></span><code>Text(0.5, 1.0, &#39;Binary Weighted Resistor DAC Transfer Function&#39;)
+</code></pre></div>
+
+<p><img alt="png" src="practical_class_6_files/practical_class_6_18_1.png" /></p>
+<div class="codehilite"><pre><span></span><code><span class="c1"># compute the DNL and INL of the DAC featuring the resistor mismatch</span>
+<span class="n">vlsb_measured</span> <span class="o">=</span> <span class="p">(</span><span class="n">vout_nonideal</span><span class="p">[</span><span class="mi">2</span><span class="o">**</span><span class="n">nbits</span> <span class="o">-</span> <span class="mi">1</span><span class="p">]</span> <span class="o">-</span> <span class="n">vout_nonideal</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span><span class="o">/</span><span class="p">(</span><span class="mi">2</span><span class="o">**</span><span class="n">nbits</span> <span class="o">-</span> <span class="mi">1</span><span class="p">)</span>
+<span class="n">dnl</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">diff</span><span class="p">(</span><span class="n">vout_nonideal</span><span class="p">)</span><span class="o">/</span><span class="n">vlsb_measured</span> <span class="o">-</span> <span class="mi">1</span>
+<span class="n">inl</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="mi">0</span><span class="p">]</span> <span class="o">+</span> <span class="n">np</span><span class="o">.</span><span class="n">cumsum</span><span class="p">(</span><span class="n">dnl</span><span class="p">)</span><span class="o">.</span><span class="n">tolist</span><span class="p">())</span>
+<span class="k">assert</span> <span class="nb">len</span><span class="p">(</span><span class="n">dnl</span><span class="p">)</span> <span class="o">==</span> <span class="mi">2</span><span class="o">**</span><span class="n">nbits</span> <span class="o">-</span> <span class="mi">1</span>
+<span class="k">assert</span> <span class="nb">len</span><span class="p">(</span><span class="n">inl</span><span class="p">)</span> <span class="o">==</span> <span class="mi">2</span><span class="o">**</span><span class="n">nbits</span>
+<span class="c1"># plot the DNL and INL</span>
+<span class="n">fig</span><span class="p">,</span> <span class="n">ax</span> <span class="o">=</span> <span class="n">plt</span><span class="o">.</span><span class="n">subplots</span><span class="p">(</span><span class="mi">2</span><span class="p">,</span><span class="mi">1</span><span class="p">,</span> <span class="n">figsize</span><span class="o">=</span><span class="p">(</span><span class="mi">4</span><span class="p">,</span><span class="mi">4</span><span class="p">))</span>
+<span class="n">ax</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">step</span><span class="p">(</span><span class="n">codes</span><span class="p">[</span><span class="mi">1</span><span class="p">:],</span> <span class="n">dnl</span><span class="p">,</span> <span class="s1">&#39;b&#39;</span><span class="p">,</span> <span class="n">label</span><span class="o">=</span><span class="s1">&#39;DNL&#39;</span><span class="p">)</span>
+<span class="n">ax</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">set_xlabel</span><span class="p">(</span><span class="s1">&#39;input codes&#39;</span><span class="p">)</span>
+<span class="n">ax</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">set_ylabel</span><span class="p">(</span><span class="s1">&#39;DNL&#39;</span><span class="p">)</span>
+<span class="n">ax</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">legend</span><span class="p">()</span>
+<span class="n">ax</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">grid</span><span class="p">(</span><span class="kc">True</span><span class="p">)</span>
+<span class="n">ax</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">step</span><span class="p">(</span><span class="n">codes</span><span class="p">,</span> <span class="n">inl</span><span class="p">,</span> <span class="s1">&#39;r&#39;</span><span class="p">,</span> <span class="n">label</span><span class="o">=</span><span class="s1">&#39;INL&#39;</span><span class="p">)</span>
+<span class="n">ax</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">set_xlabel</span><span class="p">(</span><span class="s1">&#39;input codes&#39;</span><span class="p">)</span>
+<span class="n">ax</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">set_ylabel</span><span class="p">(</span><span class="s1">&#39;INL&#39;</span><span class="p">)</span>
+<span class="n">ax</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">legend</span><span class="p">()</span>
+<span class="n">ax</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">grid</span><span class="p">(</span><span class="kc">True</span><span class="p">)</span>
+</code></pre></div>
+
+<p><img alt="png" src="practical_class_6_files/practical_class_6_19_0.png" /></p>
+<div class="codehilite"><pre><span></span><code><span class="c1"># generate several binary weighted resistor</span>
+<span class="c1"># circuits, with random resistance wheights </span>
+<span class="c1"># every time, and observe the histogram of </span>
+<span class="c1"># the resolution of the DAC</span>
+<span class="n">ncircuits</span> <span class="o">=</span> <span class="mi">100</span>
+<span class="n">dac_res</span> <span class="o">=</span> <span class="p">[]</span> <span class="c1"># measure the effective resolution for each of the circuits</span>
+<span class="c1"># resistance mismatch in ohm, following a normal distribution</span>
+<span class="n">u_err</span> <span class="o">=</span> <span class="mf">0.0</span>
+<span class="n">u_std</span> <span class="o">=</span> <span class="mf">0.05</span> <span class="c1"># 15% of the unit resistance for a semiconductor resistor</span>
+<span class="n">codes</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">arange</span><span class="p">(</span><span class="mi">2</span><span class="o">**</span><span class="n">nbits</span><span class="p">)</span>
+<span class="c1"># get the binary codes</span>
+<span class="n">incodes_bin</span> <span class="o">=</span> <span class="n">dec2bin</span><span class="p">(</span><span class="n">codes</span><span class="p">,</span> <span class="n">nbits</span><span class="p">)</span>
+<span class="k">for</span> <span class="n">circ</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">ncircuits</span><span class="p">):</span>
+    <span class="n">R_ideal</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="n">ru</span><span class="o">*</span><span class="p">(</span><span class="mi">2</span><span class="o">**</span><span class="n">i</span><span class="p">)</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="n">nbits</span><span class="p">)])</span>
+    <span class="c1"># feedback resistor</span>
+    <span class="n">rf</span> <span class="o">=</span> <span class="n">R_ideal</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+    <span class="c1"># resistor array</span>
+    <span class="n">R_ideal</span> <span class="o">=</span> <span class="n">R_ideal</span><span class="p">[</span><span class="mi">1</span><span class="p">:]</span>
+    <span class="c1"># resistance mismatch in ohm, following a normal distribution</span>
+    <span class="n">u_err</span> <span class="o">=</span> <span class="mf">0.0</span>
+    <span class="n">u_std</span> <span class="o">=</span> <span class="mf">0.15</span> <span class="c1"># 15% of the unit resistance for a semiconductor resistor</span>
+    <span class="n">r_err</span> <span class="o">=</span> <span class="n">normal</span><span class="p">(</span><span class="n">u_err</span><span class="p">,</span> <span class="n">u_std</span><span class="p">,</span> <span class="n">nbits</span><span class="p">)</span>
+    <span class="n">R</span> <span class="o">=</span> <span class="n">R_ideal</span> <span class="o">+</span> <span class="n">np</span><span class="o">.</span><span class="n">multiply</span><span class="p">(</span><span class="n">R_ideal</span><span class="p">,</span> <span class="n">r_err</span><span class="p">)</span>
+    <span class="c1"># get the transconductances</span>
+    <span class="n">G</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="mi">1</span><span class="o">/</span><span class="n">r</span> <span class="k">for</span> <span class="n">r</span> <span class="ow">in</span> <span class="n">R</span><span class="p">])</span>
+    <span class="c1"># get the currents</span>
+    <span class="n">currents</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span>
+        <span class="n">vref</span><span class="o">*</span><span class="n">np</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">G</span><span class="p">[</span><span class="n">icodes</span> <span class="o">==</span> <span class="mi">1</span><span class="p">])</span> <span class="k">for</span> <span class="n">icodes</span> <span class="ow">in</span> <span class="n">incodes_bin</span><span class="p">])</span>
+    <span class="n">vout_nonideal</span> <span class="o">=</span> <span class="o">-</span><span class="n">currents</span><span class="o">*</span><span class="n">rf</span>
+    <span class="n">vlsb_measured</span> <span class="o">=</span> <span class="p">(</span><span class="n">vout_nonideal</span><span class="p">[</span><span class="mi">2</span><span class="o">**</span><span class="n">nbits</span> <span class="o">-</span> <span class="mi">1</span><span class="p">]</span> <span class="o">-</span> <span class="n">vout_nonideal</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span><span class="o">/</span><span class="p">(</span><span class="mi">2</span><span class="o">**</span><span class="n">nbits</span> <span class="o">-</span> <span class="mi">1</span><span class="p">)</span>
+    <span class="n">dnl</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">diff</span><span class="p">(</span><span class="n">vout_nonideal</span><span class="p">)</span><span class="o">/</span><span class="n">vlsb_measured</span> <span class="o">-</span> <span class="mi">1</span>
+    <span class="n">inl</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="mi">0</span><span class="p">]</span> <span class="o">+</span> <span class="n">np</span><span class="o">.</span><span class="n">cumsum</span><span class="p">(</span><span class="n">dnl</span><span class="p">)</span><span class="o">.</span><span class="n">tolist</span><span class="p">())</span>
+    <span class="c1"># compute the effective number of bits of the DAC using the INL (once the lost bits can be compute by the </span>
+    <span class="c1"># difference between the minimum and maximum value of the INL)</span>
+    <span class="n">dac_linearity</span> <span class="o">=</span> <span class="n">nbits</span> <span class="o">-</span> <span class="n">np</span><span class="o">.</span><span class="n">log2</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">max</span><span class="p">(</span><span class="n">inl</span><span class="p">)</span> <span class="o">-</span> <span class="n">np</span><span class="o">.</span><span class="n">min</span><span class="p">(</span><span class="n">inl</span><span class="p">))</span>
+    <span class="n">dac_res</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">dac_linearity</span><span class="p">)</span>
+<span class="c1"># plot the histogram of the effective number of bits of the DAC</span>
+<span class="n">fig</span><span class="p">,</span> <span class="n">ax</span> <span class="o">=</span> <span class="n">plt</span><span class="o">.</span><span class="n">subplots</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span><span class="mi">1</span><span class="p">,</span> <span class="n">figsize</span><span class="o">=</span><span class="p">(</span><span class="mi">4</span><span class="p">,</span><span class="mi">4</span><span class="p">))</span>
+<span class="n">sns</span><span class="o">.</span><span class="n">histplot</span><span class="p">(</span><span class="n">dac_res</span><span class="p">,</span> <span class="n">ax</span><span class="o">=</span><span class="n">ax</span><span class="p">,</span> <span class="n">stat</span><span class="o">=</span><span class="s2">&quot;density&quot;</span><span class="p">,</span> <span class="n">kde</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+<span class="n">ax</span><span class="o">.</span><span class="n">set_xlabel</span><span class="p">(</span><span class="s1">&#39;effective number of bits&#39;</span><span class="p">)</span>
+<span class="n">ax</span><span class="o">.</span><span class="n">set_ylabel</span><span class="p">(</span><span class="s1">&#39;probability density function of each circuit&#39;</span><span class="p">)</span>
+<span class="n">ax</span><span class="o">.</span><span class="n">grid</span><span class="p">(</span><span class="kc">True</span><span class="p">)</span>
+<span class="n">ax</span><span class="o">.</span><span class="n">set_title</span><span class="p">(</span><span class="s1">&#39;DAC resolution distribution against resistor mismatch&#39;</span><span class="p">)</span>
+</code></pre></div>
+
+<div class="codehilite"><pre><span></span><code>Text(0.5, 1.0, &#39;DAC resolution distribution against resistor mismatch&#39;)
+</code></pre></div>
+
+<p><img alt="png" src="practical_class_6_files/practical_class_6_20_1.png" /></p>
+<p align="justify">
+As it is possible to observe, the binary weighted resistor DAC is much more sensitive to resistor mismatch than the thermometer ladder DAC. This is due to the fact the higher is the resistor's resistance, the higher will be the deviation (in iohms) from the ideal value, although it is the same in terms of percentage. As such, transistions associated with input codes featuring changes in the least significant bits will be more sensitive to resistor mismatch than transistions associated with input codes featuring changes only in the most significant bits. 
+</p>
+
+<h3 id="reducing-mismatch-sensitivity-of-binary-weighted-resistor-arrays">Reducing mismatch sensitivity of binary weighted resistor arrays</h3>
+<p align="justify">
+In practice, one way to reduce the mismatch sensitivity of the DAC is to correctly design the resistor array in the circuit's layout. Instead of using variable length polysilicon resistors, a single fixed length and width resistor is used for the highest resistor of the array, and the subsequent resistors are implemented as a parallel combination a a power-of-two number of this highest resistance resistor to make the smaller resistors of the array. Because the standard deviation of the mismatch value of the highest resistor is the same for all the resistors of the array, the mismatch sensitivity of the DAC is reduced once the effective mismatch of the smaller resistors (made by parallel combinations of the resistor with the highest mismatch) decreases.
+</p>
+
+<p>Of course that the tradeoff is the in-silicon occupied area. In the classic configuration there are N resistors in the array for a DAC with N bits of resolution, whereas in the proposed configuration there are $2^{N} - 1$ resistors in the array for a DAC with N bits of resolution.</p>
+<div class="codehilite"><pre><span></span><code><span class="c1"># generate several binary weighted resistor</span>
+<span class="c1"># circuits, with random resistance wheights </span>
+<span class="c1"># every time, and observe the histogram of </span>
+<span class="c1"># the resolution of the DAC</span>
+<span class="n">ncircuits</span> <span class="o">=</span> <span class="mi">100</span>
+<span class="n">dac_res</span> <span class="o">=</span> <span class="p">[]</span> <span class="c1"># measure the effective resolution for each of the circuits</span>
+<span class="c1"># resistance mismatch in ohm, following a normal distribution</span>
+<span class="n">ru</span> <span class="o">=</span> <span class="mf">2e3</span> <span class="c1"># unit resistance in ohm</span>
+<span class="n">u_err</span> <span class="o">=</span> <span class="mf">0.0</span>
+<span class="n">u_std</span> <span class="o">=</span> <span class="mf">0.05</span> <span class="c1"># 33% of the unit resistance for a semiconductor resistor</span>
+<span class="n">codes</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">arange</span><span class="p">(</span><span class="mi">2</span><span class="o">**</span><span class="n">nbits</span><span class="p">)</span>
+<span class="c1"># get the binary codes</span>
+<span class="n">incodes_bin</span> <span class="o">=</span> <span class="n">dec2bin</span><span class="p">(</span><span class="n">codes</span><span class="p">,</span> <span class="n">nbits</span><span class="p">)</span>
+<span class="k">for</span> <span class="n">circ</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">ncircuits</span><span class="p">):</span>
+    <span class="c1"># generate the array of resistors made with parallel combinations of the unit resistor</span>
+    <span class="c1"># NOTE that in this layout configuration, there are 2**nbits - 1 resistors in the array</span>
+    <span class="c1"># whereas in the previous configuration there were nbits resistors</span>
+    <span class="n">R_ideal</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">ones</span><span class="p">(</span><span class="mi">2</span><span class="o">**</span><span class="n">nbits</span><span class="o">-</span><span class="mi">1</span><span class="p">)</span><span class="o">*</span><span class="n">ru</span>
+    <span class="n">R_idxs</span> <span class="o">=</span> <span class="p">{</span><span class="nb">id</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">arange</span><span class="p">(</span><span class="mi">2</span><span class="o">**</span><span class="nb">id</span><span class="p">,</span> <span class="mi">2</span><span class="o">**</span><span class="p">(</span><span class="nb">id</span><span class="o">+</span><span class="mi">1</span><span class="p">))</span><span class="o">-</span><span class="mi">1</span> <span class="k">for</span> <span class="nb">id</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">nbits</span><span class="p">)}</span>
+    <span class="n">u_err</span> <span class="o">=</span> <span class="mf">0.0</span>
+    <span class="n">u_std</span> <span class="o">=</span> <span class="mf">0.15</span> <span class="c1"># 15% of the unit resistance for a semiconductor resistor</span>
+    <span class="n">r_err</span> <span class="o">=</span> <span class="n">normal</span><span class="p">(</span><span class="n">u_err</span><span class="p">,</span> <span class="n">u_std</span><span class="p">,</span> <span class="nb">len</span><span class="p">(</span><span class="n">R_ideal</span><span class="p">))</span>
+    <span class="n">R</span> <span class="o">=</span> <span class="n">R_ideal</span> <span class="o">+</span> <span class="n">np</span><span class="o">.</span><span class="n">multiply</span><span class="p">(</span><span class="n">R_ideal</span><span class="p">,</span> <span class="n">r_err</span><span class="p">)</span>
+    <span class="c1"># generate the binary weighted resistor array from </span>
+    <span class="c1"># the unit resistor in parallel combinations</span>
+    <span class="n">R</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="mi">1</span><span class="o">/</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">sum</span><span class="p">([</span><span class="mi">1</span><span class="o">/</span><span class="n">R</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="n">R_idxs</span><span class="p">[</span><span class="nb">id</span><span class="p">]]))</span> <span class="k">for</span> <span class="nb">id</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">nbits</span><span class="p">)])</span>
+    <span class="n">R</span> <span class="o">=</span> <span class="n">R</span><span class="p">[::</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span> <span class="c1"># reverse the array to associate the MSB to lowest resistance resistor</span>
+    <span class="c1"># feedback resistor</span>
+    <span class="n">rf</span> <span class="o">=</span> <span class="n">ru</span><span class="o">/</span><span class="mi">2</span>
+    <span class="c1"># get the transconductances</span>
+    <span class="n">G</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="mi">1</span><span class="o">/</span><span class="n">r</span> <span class="k">for</span> <span class="n">r</span> <span class="ow">in</span> <span class="n">R</span><span class="p">])</span>
+    <span class="c1"># get the currents</span>
+    <span class="n">currents</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span>
+        <span class="n">vref</span><span class="o">*</span><span class="n">np</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">G</span><span class="p">[</span><span class="n">icodes</span> <span class="o">==</span> <span class="mi">1</span><span class="p">])</span> <span class="k">for</span> <span class="n">icodes</span> <span class="ow">in</span> <span class="n">incodes_bin</span><span class="p">])</span>
+    <span class="n">vout_nonideal</span> <span class="o">=</span> <span class="o">-</span><span class="n">currents</span><span class="o">*</span><span class="n">rf</span>
+    <span class="n">vlsb_measured</span> <span class="o">=</span> <span class="p">(</span><span class="n">vout_nonideal</span><span class="p">[</span><span class="mi">2</span><span class="o">**</span><span class="n">nbits</span> <span class="o">-</span> <span class="mi">1</span><span class="p">]</span> <span class="o">-</span> <span class="n">vout_nonideal</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span><span class="o">/</span><span class="p">(</span><span class="mi">2</span><span class="o">**</span><span class="n">nbits</span> <span class="o">-</span> <span class="mi">1</span><span class="p">)</span>
+    <span class="n">dnl</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">diff</span><span class="p">(</span><span class="n">vout_nonideal</span><span class="p">)</span><span class="o">/</span><span class="n">vlsb_measured</span> <span class="o">-</span> <span class="mi">1</span>
+    <span class="n">inl</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="mi">0</span><span class="p">]</span> <span class="o">+</span> <span class="n">np</span><span class="o">.</span><span class="n">cumsum</span><span class="p">(</span><span class="n">dnl</span><span class="p">)</span><span class="o">.</span><span class="n">tolist</span><span class="p">())</span>
+    <span class="c1"># compute the effective number of bits of the DAC using the INL (once the lost bits can be compute by the </span>
+    <span class="c1"># difference between the minimum and maximum value of the INL)</span>
+    <span class="n">dac_linearity</span> <span class="o">=</span> <span class="n">nbits</span> <span class="o">-</span> <span class="n">np</span><span class="o">.</span><span class="n">log2</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">max</span><span class="p">(</span><span class="n">inl</span><span class="p">)</span> <span class="o">-</span> <span class="n">np</span><span class="o">.</span><span class="n">min</span><span class="p">(</span><span class="n">inl</span><span class="p">))</span>
+    <span class="n">dac_res</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">dac_linearity</span><span class="p">)</span>
+<span class="c1"># plot the histogram of the effective number of bits of the DAC</span>
+<span class="n">fig</span><span class="p">,</span> <span class="n">ax</span> <span class="o">=</span> <span class="n">plt</span><span class="o">.</span><span class="n">subplots</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span><span class="mi">1</span><span class="p">,</span> <span class="n">figsize</span><span class="o">=</span><span class="p">(</span><span class="mi">4</span><span class="p">,</span><span class="mi">4</span><span class="p">))</span>
+<span class="n">sns</span><span class="o">.</span><span class="n">histplot</span><span class="p">(</span><span class="n">dac_res</span><span class="p">,</span> <span class="n">ax</span><span class="o">=</span><span class="n">ax</span><span class="p">,</span> <span class="n">stat</span><span class="o">=</span><span class="s2">&quot;density&quot;</span><span class="p">,</span> <span class="n">kde</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+<span class="n">ax</span><span class="o">.</span><span class="n">set_xlabel</span><span class="p">(</span><span class="s1">&#39;effective number of bits&#39;</span><span class="p">)</span>
+<span class="n">ax</span><span class="o">.</span><span class="n">set_ylabel</span><span class="p">(</span><span class="s1">&#39;probability density function of each circuit&#39;</span><span class="p">)</span>
+<span class="n">ax</span><span class="o">.</span><span class="n">grid</span><span class="p">(</span><span class="kc">True</span><span class="p">)</span>
+<span class="n">ax</span><span class="o">.</span><span class="n">set_title</span><span class="p">(</span><span class="s1">&#39;DAC resolution distribution against resistor mismatch&#39;</span><span class="p">)</span>
+</code></pre></div>
+
+<div class="codehilite"><pre><span></span><code>Text(0.5, 1.0, &#39;DAC resolution distribution against resistor mismatch&#39;)
+</code></pre></div>
+
+<p><img alt="png" src="practical_class_6_files/practical_class_6_22_1.png" /></p>
+<p align="justify">
+From the above histogram, is possible to observe that the implementation of the binary weighted resistor array 
+designed through parallel combinations of the highest unitary resistor of the array enables the reduction of the mismatch sensitivity of the DAC, increasing the effective resolution of the DAC.
+</p>
+
+<h2 align="left"> Modelling a R-2R DAC </h2>
+
+<p align="center">
+<img src="./imgs/r_2r_dac.png" width=500>
+</p>
+
+<div class="codehilite"><pre><span></span><code><span class="c1"># set up the DAC parameters</span>
+<span class="n">vref</span> <span class="o">=</span> <span class="mi">1</span> <span class="c1"># V</span>
+<span class="n">nbits</span> <span class="o">=</span> <span class="mi">8</span> <span class="c1"># number of bits</span>
+<span class="n">vlsb</span> <span class="o">=</span> <span class="n">vref</span> <span class="o">/</span> <span class="p">(</span><span class="mi">2</span><span class="o">**</span><span class="n">nbits</span><span class="p">)</span> <span class="c1"># V</span>
+<span class="c1"># number of simulation points</span>
+<span class="n">Np</span> <span class="o">=</span> <span class="mf">1e6</span>
+<span class="c1"># define the time base</span>
+<span class="n">Fs</span> <span class="o">=</span> <span class="mf">1e9</span> <span class="c1"># Hz</span>
+<span class="n">Ts</span> <span class="o">=</span> <span class="mi">1</span><span class="o">/</span><span class="n">Fs</span> <span class="c1"># s</span>
+<span class="n">tD</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">arange</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span><span class="n">Np</span><span class="p">)</span><span class="o">*</span><span class="n">Ts</span><span class="p">;</span> <span class="c1"># (0:Np-1) == np.arange(0,Np)</span>
+<span class="c1"># setup the input codes</span>
+<span class="n">A4</span> <span class="o">=</span> <span class="n">vref</span><span class="o">/</span><span class="mi">2</span>
+<span class="n">f4</span> <span class="o">=</span> <span class="mf">1e3</span> <span class="c1"># Hz</span>
+<span class="n">ph4</span> <span class="o">=</span> <span class="mi">0</span> <span class="c1"># rad</span>
+<span class="n">ofst</span> <span class="o">=</span> <span class="mf">0.0</span>
+<span class="n">si</span> <span class="o">=</span> <span class="n">A4</span><span class="o">*</span><span class="n">np</span><span class="o">.</span><span class="n">sin</span><span class="p">(</span><span class="mi">2</span><span class="o">*</span><span class="n">np</span><span class="o">.</span><span class="n">pi</span><span class="o">*</span><span class="n">f4</span><span class="o">*</span><span class="n">tD</span> <span class="o">+</span> <span class="n">ph4</span><span class="p">)</span> <span class="o">+</span> <span class="n">ofst</span> <span class="o">+</span> <span class="n">vref</span><span class="o">/</span><span class="mi">2</span>
+<span class="c1"># get the codes from the ideal DAC</span>
+<span class="n">incodes</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">round</span><span class="p">(</span><span class="n">si</span><span class="o">/</span><span class="n">vlsb</span><span class="p">)</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="nb">int</span><span class="p">)</span>
+<span class="c1"># represent the input signal and codes</span>
+</code></pre></div>
+
+<div class="codehilite"><pre><span></span><code><span class="n">fig</span><span class="p">,</span> <span class="n">ax</span> <span class="o">=</span> <span class="n">plt</span><span class="o">.</span><span class="n">subplots</span><span class="p">(</span><span class="mi">2</span><span class="p">,</span><span class="mi">1</span><span class="p">,</span> <span class="n">figsize</span><span class="o">=</span><span class="p">(</span><span class="mi">4</span><span class="p">,</span><span class="mi">4</span><span class="p">))</span>
+<span class="n">ax</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span><span class="n">tD</span><span class="p">,</span> <span class="n">si</span><span class="p">,</span> <span class="s1">&#39;b&#39;</span><span class="p">,</span> <span class="n">label</span><span class="o">=</span><span class="s1">&#39;input signal&#39;</span><span class="p">)</span>
+<span class="n">ax</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">set_xlabel</span><span class="p">(</span><span class="s1">&#39;time (s)&#39;</span><span class="p">)</span>
+<span class="n">ax</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">set_ylabel</span><span class="p">(</span><span class="s1">&#39;voltage (V)&#39;</span><span class="p">)</span>
+<span class="n">ax</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">legend</span><span class="p">()</span>
+<span class="n">ax</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span><span class="n">tD</span><span class="p">,</span> <span class="n">incodes</span><span class="p">,</span> <span class="s1">&#39;r&#39;</span><span class="p">,</span> <span class="n">label</span><span class="o">=</span><span class="s1">&#39;input codes&#39;</span><span class="p">)</span>
+<span class="n">ax</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">set_xlabel</span><span class="p">(</span><span class="s1">&#39;time (s)&#39;</span><span class="p">)</span>
+<span class="n">ax</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">set_ylabel</span><span class="p">(</span><span class="s1">&#39;codes&#39;</span><span class="p">)</span>
+<span class="n">ax</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">legend</span><span class="p">()</span>
+<span class="n">ax</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">set_xlim</span><span class="p">([</span><span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="o">/</span><span class="p">(</span><span class="n">f4</span><span class="p">)])</span>
+<span class="n">ax</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">set_xlim</span><span class="p">([</span><span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="o">/</span><span class="p">(</span><span class="n">f4</span><span class="p">)])</span>
+<span class="n">ax</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">grid</span><span class="p">(</span><span class="kc">True</span><span class="p">);</span> <span class="n">ax</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">grid</span><span class="p">(</span><span class="kc">True</span><span class="p">)</span>
+</code></pre></div>
+
+<p><img alt="png" src="practical_class_6_files/practical_class_6_26_0.png" /></p>
+<div class="codehilite"><pre><span></span><code><span class="c1"># model the binary wheighted resistors</span>
+<span class="n">ru</span> <span class="o">=</span> <span class="mi">100</span> <span class="c1"># ohm - unit resistance</span>
+<span class="c1"># vertical resistors = 2*Ru</span>
+<span class="n">rv</span> <span class="o">=</span> <span class="mi">2</span><span class="o">*</span><span class="n">ru</span><span class="o">*</span><span class="n">np</span><span class="o">.</span><span class="n">ones</span><span class="p">(</span><span class="n">nbits</span><span class="o">+</span><span class="mi">1</span><span class="p">)</span>
+<span class="c1"># horizontal resistors = Ru</span>
+<span class="n">rh</span> <span class="o">=</span> <span class="n">ru</span><span class="o">*</span><span class="n">np</span><span class="o">.</span><span class="n">ones</span><span class="p">(</span><span class="n">nbits</span><span class="o">-</span><span class="mi">1</span><span class="p">)</span>
+<span class="c1"># resistance mismatch in ohm, following a normal distribution</span>
+<span class="n">u_err</span> <span class="o">=</span> <span class="mf">0.0</span>
+<span class="n">u_std</span> <span class="o">=</span> <span class="mf">0.05</span> <span class="c1"># 5% of the unit resistance for a semiconductor resistor</span>
+<span class="n">r_err</span> <span class="o">=</span> <span class="n">normal</span><span class="p">(</span><span class="n">u_err</span><span class="p">,</span> <span class="n">u_std</span><span class="p">,</span> <span class="n">nbits</span><span class="o">+</span><span class="mi">1</span><span class="p">)</span>
+<span class="n">Rv</span> <span class="o">=</span> <span class="n">rv</span> <span class="o">+</span> <span class="n">rv</span><span class="o">*</span><span class="n">r_err</span>
+<span class="n">Rg</span> <span class="o">=</span> <span class="n">Rv</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span>
+<span class="n">Rv</span> <span class="o">=</span> <span class="n">Rv</span><span class="p">[:</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span>
+<span class="n">r_err</span> <span class="o">=</span> <span class="n">normal</span><span class="p">(</span><span class="n">u_err</span><span class="p">,</span> <span class="n">u_std</span><span class="p">,</span> <span class="n">nbits</span><span class="o">-</span><span class="mi">1</span><span class="p">)</span>
+<span class="n">Rh</span> <span class="o">=</span> <span class="n">rh</span> <span class="o">+</span> <span class="n">rh</span><span class="o">*</span><span class="n">r_err</span>
+<span class="c1"># feedback resistor </span>
+<span class="n">Rf</span> <span class="o">=</span> <span class="n">ru</span><span class="o">*</span><span class="mi">2</span><span class="o">**</span><span class="n">nbits</span>
+<span class="n">Rf</span><span class="p">,</span> <span class="n">Rg</span><span class="p">,</span> <span class="n">Rv</span><span class="p">,</span> <span class="n">Rh</span>
+</code></pre></div>
+
+<div class="codehilite"><pre><span></span><code>(25600,
+ np.float64(208.49751019090903),
+ array([213.5285145 , 193.90647816, 194.17099207, 197.25946699,
+        208.11691498, 230.17619108, 196.78889373, 211.35284485]),
+ array([ 95.06471546, 107.93773213, 111.49062744,  97.86837209,
+        100.23190548, 104.43222349,  97.47375927]))
+</code></pre></div>
+
+<div class="codehilite"><pre><span></span><code><span class="n">fig</span><span class="p">,</span> <span class="n">ax</span> <span class="o">=</span> <span class="n">plt</span><span class="o">.</span><span class="n">subplots</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span><span class="mi">2</span><span class="p">,</span> <span class="n">figsize</span><span class="o">=</span><span class="p">(</span><span class="mi">9</span><span class="p">,</span><span class="mi">4</span><span class="p">))</span>
+<span class="n">sns</span><span class="o">.</span><span class="n">histplot</span><span class="p">(</span><span class="n">Rv</span><span class="p">,</span> <span class="n">ax</span><span class="o">=</span><span class="n">ax</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">stat</span><span class="o">=</span><span class="s2">&quot;probability&quot;</span><span class="p">,</span> <span class="n">kde</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+<span class="n">ax</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">set_xlabel</span><span class="p">(</span><span class="s1">&#39;resistance (Ohm)&#39;</span><span class="p">)</span>
+<span class="n">ax</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">set_ylabel</span><span class="p">(</span><span class="s1">&#39;probability density&#39;</span><span class="p">)</span>
+<span class="n">ax</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">grid</span><span class="p">(</span><span class="kc">True</span><span class="p">)</span>
+<span class="n">ax</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">set_title</span><span class="p">(</span><span class="s1">&#39;vertical resistor</span><span class="se">\n</span><span class="s1">values distribution&#39;</span><span class="p">)</span>
+<span class="n">sns</span><span class="o">.</span><span class="n">histplot</span><span class="p">(</span><span class="n">Rh</span><span class="p">,</span> <span class="n">ax</span><span class="o">=</span><span class="n">ax</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span> <span class="n">stat</span><span class="o">=</span><span class="s2">&quot;probability&quot;</span><span class="p">,</span> <span class="n">kde</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+<span class="n">ax</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">set_xlabel</span><span class="p">(</span><span class="s1">&#39;resistance (Ohm)&#39;</span><span class="p">)</span>
+<span class="n">ax</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">set_ylabel</span><span class="p">(</span><span class="s1">&#39;probability density&#39;</span><span class="p">)</span>
+<span class="n">ax</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">grid</span><span class="p">(</span><span class="kc">True</span><span class="p">)</span>
+<span class="n">ax</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">set_title</span><span class="p">(</span><span class="s1">&#39;horizontal resistor</span><span class="se">\n</span><span class="s1">values distribution&#39;</span><span class="p">)</span>
+</code></pre></div>
+
+<div class="codehilite"><pre><span></span><code>Text(0.5, 1.0, &#39;horizontal resistor\nvalues distribution&#39;)
+</code></pre></div>
+
+<p><img alt="png" src="practical_class_6_files/practical_class_6_28_1.png" /></p>
+<div class="codehilite"><pre><span></span><code><span class="kn">import</span> <span class="nn">pdb</span>
+
+<span class="n">nodeVolt</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="n">nbits</span><span class="p">)</span><span class="c1"># node voltages, from lsb to msb</span>
+<span class="n">reqs</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="n">nbits</span><span class="p">)</span><span class="c1"># equivalent resistances at each node, from lsb to msb</span>
+<span class="c1"># setup the equivalent resistances</span>
+<span class="n">reqs</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">=</span> <span class="n">Rg</span><span class="o">*</span><span class="n">Rv</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">/</span><span class="p">(</span><span class="n">Rg</span><span class="o">+</span><span class="n">Rv</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span>
+<span class="c1"># define the vectorizable resistance function to </span>
+<span class="c1"># compute the equivalent resistance at each node</span>
+
+<span class="k">def</span> <span class="nf">reqf</span><span class="p">(</span><span class="n">node</span><span class="p">,</span> <span class="n">Rv</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">Rh</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">Req</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+    <span class="n">Req</span><span class="p">[</span><span class="n">node</span><span class="p">]</span> <span class="o">=</span> <span class="p">(</span><span class="n">Rh</span><span class="p">[</span><span class="n">node</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span><span class="o">+</span><span class="n">Req</span><span class="p">[</span><span class="n">node</span><span class="o">-</span><span class="mi">1</span><span class="p">])</span><span class="o">*</span><span class="n">Rv</span><span class="p">[</span><span class="n">node</span><span class="p">]</span> <span class="o">/</span> <span class="p">(</span><span class="n">Rh</span><span class="p">[</span><span class="n">node</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span> <span class="o">+</span> <span class="n">Rv</span><span class="p">[</span><span class="n">node</span><span class="p">]</span><span class="o">+</span> <span class="n">Req</span><span class="p">[</span><span class="n">node</span><span class="o">-</span><span class="mi">1</span><span class="p">])</span>
+<span class="n">reqfp</span> <span class="o">=</span> <span class="n">partial</span><span class="p">(</span><span class="n">reqf</span><span class="p">,</span> <span class="n">Rv</span><span class="o">=</span><span class="n">Rv</span><span class="p">,</span> <span class="n">Rh</span><span class="o">=</span><span class="n">Rh</span><span class="p">,</span> <span class="n">Req</span><span class="o">=</span><span class="n">reqs</span><span class="p">)</span>
+<span class="c1"># vectorize the function</span>
+<span class="n">reqvf</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">vectorize</span><span class="p">(</span><span class="n">reqfp</span><span class="p">)</span>
+<span class="n">reqvf</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">arange</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span><span class="n">nbits</span><span class="p">))</span> <span class="c1"># compute the equivalent resistances at each node</span>
+<span class="c1"># compute the node voltages </span>
+<span class="n">nodeVolt</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span> <span class="o">=</span> <span class="o">-</span><span class="n">vref</span>
+<span class="k">def</span> <span class="nf">vnf</span><span class="p">(</span><span class="n">node</span> <span class="p">,</span> <span class="n">nodeVolt</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">Req</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">Rh</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+    <span class="n">nodeVolt</span><span class="p">[</span><span class="n">node</span><span class="p">]</span> <span class="o">=</span> <span class="n">nodeVolt</span><span class="p">[</span><span class="n">node</span><span class="o">+</span><span class="mi">1</span><span class="p">]</span><span class="o">*</span><span class="n">Req</span><span class="p">[</span><span class="n">node</span><span class="p">]</span> <span class="o">/</span> <span class="p">(</span><span class="n">Req</span><span class="p">[</span><span class="n">node</span><span class="p">]</span><span class="o">+</span><span class="n">Rh</span><span class="p">[</span><span class="n">node</span><span class="p">])</span>
+<span class="n">vnfp</span> <span class="o">=</span> <span class="n">partial</span><span class="p">(</span><span class="n">vnf</span><span class="p">,</span> <span class="n">nodeVolt</span><span class="o">=</span><span class="n">nodeVolt</span><span class="p">,</span> <span class="n">Req</span><span class="o">=</span><span class="n">reqs</span><span class="p">,</span> <span class="n">Rh</span><span class="o">=</span><span class="n">Rh</span><span class="p">)</span>
+<span class="n">vnvf</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">vectorize</span><span class="p">(</span><span class="n">vnfp</span><span class="p">)</span>
+<span class="n">vnvf</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">arange</span><span class="p">(</span><span class="n">nbits</span><span class="o">-</span><span class="mi">1</span><span class="p">)[::</span><span class="o">-</span><span class="mi">1</span><span class="p">])</span> <span class="c1"># compute the node voltages at each node</span>
+<span class="n">nodeVolt</span> <span class="o">=</span> <span class="n">nodeVolt</span><span class="p">[::</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span> <span class="c1"># flip</span>
+<span class="c1"># compute the equivalent currents at each vertical resistor in case the bit is ON</span>
+<span class="n">currents</span> <span class="o">=</span> <span class="n">nodeVolt</span> <span class="o">/</span> <span class="n">Rv</span>
+
+<span class="n">codes</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">arange</span><span class="p">(</span><span class="mi">2</span><span class="o">**</span><span class="n">nbits</span><span class="p">)</span>
+<span class="n">incodes_bin</span> <span class="o">=</span> <span class="n">dec2bin</span><span class="p">(</span><span class="n">codes</span><span class="p">,</span> <span class="n">nbits</span><span class="p">)</span>
+<span class="c1"># compute the output currents for each input code </span>
+<span class="n">current_out</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="n">np</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">currents</span><span class="p">[</span><span class="n">incode</span> <span class="o">==</span> <span class="mi">1</span><span class="p">])</span> <span class="k">for</span> <span class="n">incode</span> <span class="ow">in</span> <span class="n">incodes_bin</span><span class="p">])</span>
+<span class="c1"># compute the output voltage for each input code</span>
+<span class="n">vout</span> <span class="o">=</span> <span class="o">-</span><span class="n">current_out</span><span class="o">*</span><span class="n">Rf</span>
+<span class="n">reqs</span><span class="p">,</span> <span class="n">nodeVolt</span><span class="p">,</span> <span class="n">Rv</span>
+</code></pre></div>
+
+<div class="codehilite"><pre><span></span><code>(array([105.49151243,  98.58765157, 100.07886536, 102.08201836,
+        101.97596783, 107.64374064, 102.07332219, 102.64018231]),
+ array([-1.        , -0.51152501, -0.25963558, -0.13093748, -0.06684839,
+        -0.03162134, -0.01509487, -0.00793982]),
+ array([213.5285145 , 193.90647816, 194.17099207, 197.25946699,
+        208.11691498, 230.17619108, 196.78889373, 211.35284485]))
+</code></pre></div>
+
+<div class="codehilite"><pre><span></span><code><span class="c1"># observe the node voltages and equivalent resistances at each node</span>
+<span class="n">fig</span><span class="p">,</span> <span class="n">ax</span> <span class="o">=</span> <span class="n">plt</span><span class="o">.</span><span class="n">subplots</span><span class="p">(</span><span class="mi">2</span><span class="p">,</span><span class="mi">1</span><span class="p">,</span> <span class="n">figsize</span><span class="o">=</span><span class="p">(</span><span class="mi">4</span><span class="p">,</span><span class="mi">4</span><span class="p">))</span>
+<span class="n">ax</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">step</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">arange</span><span class="p">(</span><span class="n">nbits</span><span class="p">),</span> <span class="n">nodeVolt</span><span class="p">,</span> <span class="s1">&#39;b&#39;</span><span class="p">,</span> <span class="n">label</span><span class="o">=</span><span class="s1">&#39;node voltages&#39;</span><span class="p">)</span>
+<span class="n">ax</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">set_xlabel</span><span class="p">(</span><span class="s1">&#39;node&#39;</span><span class="p">)</span>
+<span class="n">ax</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">set_ylabel</span><span class="p">(</span><span class="s1">&#39;voltage (V)&#39;</span><span class="p">)</span>
+<span class="n">ax</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">grid</span><span class="p">(</span><span class="kc">True</span><span class="p">)</span>
+<span class="n">ax</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">step</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">arange</span><span class="p">(</span><span class="n">nbits</span><span class="p">),</span> <span class="n">reqs</span><span class="p">,</span> <span class="s1">&#39;r&#39;</span><span class="p">,</span> <span class="n">label</span><span class="o">=</span><span class="s1">&#39;equivalent resistances&#39;</span><span class="p">)</span>
+<span class="n">ax</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">set_xlabel</span><span class="p">(</span><span class="s1">&#39;node&#39;</span><span class="p">)</span>
+<span class="n">ax</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">set_ylabel</span><span class="p">(</span><span class="s1">&#39;resistance (Ohm)&#39;</span><span class="p">)</span>
+<span class="n">ax</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">axhline</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">mean</span><span class="p">(</span><span class="n">reqs</span><span class="p">),</span> <span class="n">color</span><span class="o">=</span><span class="s1">&#39;k&#39;</span><span class="p">,</span> <span class="n">linestyle</span><span class="o">=</span><span class="s1">&#39;--&#39;</span><span class="p">,</span> <span class="n">label</span><span class="o">=</span><span class="s1">&#39;mean= </span><span class="si">{:.2f}</span><span class="s1"> Ohm&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">mean</span><span class="p">(</span><span class="n">reqs</span><span class="p">)))</span>
+<span class="n">ax</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">legend</span><span class="p">()</span>
+<span class="n">ax</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">grid</span><span class="p">(</span><span class="kc">True</span><span class="p">)</span>
+</code></pre></div>
+
+<p><img alt="png" src="practical_class_6_files/practical_class_6_30_0.png" /></p>
+<div class="codehilite"><pre><span></span><code><span class="c1"># observe both the input and output codes</span>
+<span class="n">fig</span><span class="p">,</span> <span class="n">ax</span> <span class="o">=</span> <span class="n">plt</span><span class="o">.</span><span class="n">subplots</span><span class="p">(</span><span class="mi">2</span><span class="p">,</span><span class="mi">1</span><span class="p">,</span> <span class="n">figsize</span><span class="o">=</span><span class="p">(</span><span class="mi">4</span><span class="p">,</span><span class="mi">4</span><span class="p">))</span>
+<span class="n">ax</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span><span class="n">codes</span><span class="p">,</span> <span class="n">current_out</span><span class="o">/</span><span class="mf">1e-3</span><span class="p">,</span> <span class="n">c</span><span class="o">=</span><span class="s1">&#39;k&#39;</span><span class="p">)</span>
+<span class="n">ax</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">set_xlabel</span><span class="p">(</span><span class="s1">&#39;input codes&#39;</span><span class="p">)</span>
+<span class="n">ax</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">set_ylabel</span><span class="p">(</span><span class="s1">&#39;output current (mA)&#39;</span><span class="p">)</span>
+<span class="n">ax</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">grid</span><span class="p">(</span><span class="kc">True</span><span class="p">)</span>
+<span class="n">ax</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span><span class="n">codes</span><span class="p">,</span> <span class="n">vout</span><span class="p">,</span> <span class="n">c</span><span class="o">=</span><span class="s1">&#39;k&#39;</span><span class="p">)</span>
+<span class="n">ax</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">set_xlabel</span><span class="p">(</span><span class="s1">&#39;input codes&#39;</span><span class="p">)</span>
+<span class="n">ax</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">set_ylabel</span><span class="p">(</span><span class="s1">&#39;output voltage (V)&#39;</span><span class="p">)</span>
+<span class="n">ax</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">grid</span><span class="p">(</span><span class="kc">True</span><span class="p">)</span>
+</code></pre></div>
+
+<p><img alt="png" src="practical_class_6_files/practical_class_6_31_0.png" /></p>
+<div class="codehilite"><pre><span></span><code><span class="c1"># compute the DNL and INL, and the effective number of bits of the DAC</span>
+<span class="n">vlsb_measured</span> <span class="o">=</span> <span class="p">(</span><span class="n">vout</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span> <span class="o">-</span> <span class="n">vout</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span><span class="o">/</span><span class="p">(</span><span class="mi">2</span><span class="o">**</span><span class="n">nbits</span><span class="o">-</span><span class="mi">1</span><span class="p">)</span>
+<span class="n">dnl</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">diff</span><span class="p">(</span><span class="n">vout</span><span class="p">)</span><span class="o">/</span><span class="n">vlsb_measured</span> <span class="o">-</span> <span class="mi">1</span>
+<span class="n">inl</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="mi">0</span><span class="p">]</span> <span class="o">+</span> <span class="n">np</span><span class="o">.</span><span class="n">cumsum</span><span class="p">(</span><span class="n">dnl</span><span class="p">)</span><span class="o">.</span><span class="n">tolist</span><span class="p">())</span>
+<span class="k">assert</span> <span class="n">np</span><span class="o">.</span><span class="n">allclose</span><span class="p">(</span><span class="n">inl</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">],</span> <span class="mi">0</span><span class="p">)</span> <span class="c1"># check if the INL is zero in its first and last index</span>
+<span class="k">assert</span> <span class="n">np</span><span class="o">.</span><span class="n">allclose</span><span class="p">(</span><span class="n">inl</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="mi">0</span><span class="p">)</span> <span class="c1"># check if the DNL is zero in its last index</span>
+<span class="k">assert</span> <span class="nb">len</span><span class="p">(</span><span class="n">dnl</span><span class="p">)</span> <span class="o">==</span> <span class="mi">2</span><span class="o">**</span><span class="n">nbits</span><span class="o">-</span><span class="mi">1</span>
+<span class="k">assert</span> <span class="nb">len</span><span class="p">(</span><span class="n">inl</span><span class="p">)</span> <span class="o">==</span> <span class="mi">2</span><span class="o">**</span><span class="n">nbits</span>
+<span class="c1"># compute the effective number of bits of the DAC</span>
+<span class="n">dac_linearity</span> <span class="o">=</span> <span class="n">nbits</span> <span class="o">-</span> <span class="n">np</span><span class="o">.</span><span class="n">log2</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">max</span><span class="p">(</span><span class="n">inl</span><span class="p">)</span> <span class="o">-</span> <span class="n">np</span><span class="o">.</span><span class="n">min</span><span class="p">(</span><span class="n">inl</span><span class="p">))</span>
+<span class="n">dac_linearity</span>
+</code></pre></div>
+
+<div class="codehilite"><pre><span></span><code>np.float64(4.031796695679045)
+</code></pre></div>
+
+<div class="codehilite"><pre><span></span><code><span class="c1"># plot the DNL and INL</span>
+<span class="n">fig</span><span class="p">,</span> <span class="n">ax</span> <span class="o">=</span> <span class="n">plt</span><span class="o">.</span><span class="n">subplots</span><span class="p">(</span><span class="mi">2</span><span class="p">,</span><span class="mi">1</span><span class="p">,</span> <span class="n">figsize</span><span class="o">=</span><span class="p">(</span><span class="mi">4</span><span class="p">,</span><span class="mi">4</span><span class="p">))</span>
+<span class="n">ax</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">step</span><span class="p">(</span><span class="n">codes</span><span class="p">[</span><span class="mi">1</span><span class="p">:],</span> <span class="n">dnl</span><span class="p">,</span> <span class="s1">&#39;b&#39;</span><span class="p">,</span> <span class="n">label</span><span class="o">=</span><span class="s1">&#39;DNL&#39;</span><span class="p">)</span>
+<span class="n">ax</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">set_xlabel</span><span class="p">(</span><span class="s1">&#39;input codes&#39;</span><span class="p">)</span>
+<span class="n">ax</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">set_ylabel</span><span class="p">(</span><span class="s1">&#39;DNL&#39;</span><span class="p">)</span>
+<span class="n">ax</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">legend</span><span class="p">()</span>
+<span class="n">ax</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">grid</span><span class="p">(</span><span class="kc">True</span><span class="p">)</span>
+<span class="n">ax</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">step</span><span class="p">(</span><span class="n">codes</span><span class="p">,</span> <span class="n">inl</span><span class="p">,</span> <span class="s1">&#39;r&#39;</span><span class="p">,</span> <span class="n">label</span><span class="o">=</span><span class="s1">&#39;INL&#39;</span><span class="p">)</span>
+<span class="n">ax</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">set_xlabel</span><span class="p">(</span><span class="s1">&#39;input codes&#39;</span><span class="p">)</span>
+<span class="n">ax</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">set_ylabel</span><span class="p">(</span><span class="s1">&#39;INL&#39;</span><span class="p">)</span>
+<span class="n">ax</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">legend</span><span class="p">()</span>
+<span class="n">ax</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">grid</span><span class="p">(</span><span class="kc">True</span><span class="p">)</span>
+</code></pre></div>
+
+<p><img alt="png" src="practical_class_6_files/practical_class_6_33_0.png" /></p>
+<div class="codehilite"><pre><span></span><code><span class="c1"># generate several binary weighted resistor</span>
+<span class="c1"># circuits, with random resistance wheights </span>
+<span class="c1"># every time, and observe the histogram of </span>
+<span class="c1"># the resolution of the DAC</span>
+<span class="n">ncircuits</span> <span class="o">=</span> <span class="mi">100</span>
+<span class="n">dac_res</span> <span class="o">=</span> <span class="p">[]</span> <span class="c1"># measure the effective resolution for each of the circuits</span>
+<span class="c1"># resistance mismatch in ohm, following a normal distribution</span>
+<span class="n">ru</span> <span class="o">=</span> <span class="mf">2e3</span> <span class="c1"># unit resistance in ohm</span>
+<span class="n">u_err</span> <span class="o">=</span> <span class="mf">0.0</span>
+<span class="n">u_std</span> <span class="o">=</span> <span class="mf">0.05</span> <span class="c1"># 15% of the unit resistance for a semiconductor resistor</span>
+<span class="n">codes</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">arange</span><span class="p">(</span><span class="mi">2</span><span class="o">**</span><span class="n">nbits</span><span class="p">)</span>
+<span class="c1"># get the binary codes</span>
+<span class="n">incodes_bin</span> <span class="o">=</span> <span class="n">dec2bin</span><span class="p">(</span><span class="n">codes</span><span class="p">,</span> <span class="n">nbits</span><span class="p">)</span>
+
+<span class="k">for</span> <span class="n">circ</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">ncircuits</span><span class="p">):</span>
+    <span class="c1"># model the resistors</span>
+    <span class="n">ru</span> <span class="o">=</span> <span class="mi">100</span> <span class="c1"># ohm - unit resistance</span>
+    <span class="c1"># vertical resistors = 2*Ru</span>
+    <span class="n">rv</span> <span class="o">=</span> <span class="mi">2</span><span class="o">*</span><span class="n">ru</span><span class="o">*</span><span class="n">np</span><span class="o">.</span><span class="n">ones</span><span class="p">(</span><span class="n">nbits</span><span class="o">+</span><span class="mi">1</span><span class="p">)</span>
+    <span class="c1"># horizontal resistors = Ru</span>
+    <span class="n">rh</span> <span class="o">=</span> <span class="n">ru</span><span class="o">*</span><span class="n">np</span><span class="o">.</span><span class="n">ones</span><span class="p">(</span><span class="n">nbits</span><span class="o">-</span><span class="mi">1</span><span class="p">)</span>
+    <span class="c1"># resistance mismatch in ohm, following a normal distribution</span>
+    <span class="n">u_err</span> <span class="o">=</span> <span class="mf">0.0</span>
+    <span class="n">sigma</span> <span class="o">=</span> <span class="mi">10</span> <span class="c1"># consider : 1 sigma, 2 sigma or 3 sigma (wrost case scenario)</span>
+    <span class="n">u_std</span> <span class="o">=</span> <span class="mf">0.15</span> <span class="c1"># 15% of the unit resistance for a semiconductor resistor</span>
+    <span class="n">r_err</span> <span class="o">=</span> <span class="n">normal</span><span class="p">(</span><span class="n">u_err</span><span class="p">,</span> <span class="n">u_std</span><span class="p">,</span> <span class="n">nbits</span><span class="o">+</span><span class="mi">1</span><span class="p">)</span>
+    <span class="n">Rv</span> <span class="o">=</span> <span class="n">rv</span> <span class="o">+</span> <span class="n">rv</span><span class="o">*</span><span class="n">r_err</span>
+    <span class="n">Rg</span> <span class="o">=</span> <span class="n">Rv</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span>
+    <span class="n">Rv</span> <span class="o">=</span> <span class="n">Rv</span><span class="p">[:</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span>
+    <span class="n">r_err</span> <span class="o">=</span> <span class="n">normal</span><span class="p">(</span><span class="n">u_err</span><span class="p">,</span> <span class="n">u_std</span><span class="p">,</span> <span class="n">nbits</span><span class="o">-</span><span class="mi">1</span><span class="p">)</span>
+    <span class="n">Rh</span> <span class="o">=</span> <span class="n">rh</span> <span class="o">+</span> <span class="n">rh</span><span class="o">*</span><span class="n">r_err</span>
+    <span class="c1"># feedback resistor </span>
+    <span class="n">Rf</span> <span class="o">=</span> <span class="n">ru</span><span class="o">*</span><span class="mi">2</span><span class="o">**</span><span class="n">nbits</span>
+
+    <span class="n">nodeVolt</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="n">nbits</span><span class="p">)</span><span class="c1"># node voltages, from lsb to msb</span>
+    <span class="n">reqs</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="n">nbits</span><span class="p">)</span><span class="c1"># equivalent resistances at each node, from lsb to msb</span>
+    <span class="c1"># setup the equivalent resistances</span>
+    <span class="n">reqs</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">=</span> <span class="n">Rg</span><span class="o">*</span><span class="n">Rv</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">/</span><span class="p">(</span><span class="n">Rg</span><span class="o">+</span><span class="n">Rv</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span>
+    <span class="c1"># define the vectorizable resistance function to </span>
+    <span class="c1"># compute the equivalent resistance at each node</span>
+    <span class="n">reqfp</span> <span class="o">=</span> <span class="n">partial</span><span class="p">(</span><span class="n">reqf</span><span class="p">,</span> <span class="n">Rv</span><span class="o">=</span><span class="n">Rv</span><span class="p">,</span> <span class="n">Rh</span><span class="o">=</span><span class="n">Rh</span><span class="p">,</span> <span class="n">Req</span><span class="o">=</span><span class="n">reqs</span><span class="p">)</span>
+    <span class="c1"># vectorize the function</span>
+    <span class="n">reqvf</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">vectorize</span><span class="p">(</span><span class="n">reqfp</span><span class="p">)</span>
+    <span class="n">reqvf</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">arange</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span><span class="n">nbits</span><span class="p">))</span> <span class="c1"># compute the equivalent resistances at each node</span>
+    <span class="c1"># compute the node voltages </span>
+    <span class="n">nodeVolt</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span> <span class="o">=</span> <span class="o">-</span><span class="n">vref</span>
+
+    <span class="n">vnfp</span> <span class="o">=</span> <span class="n">partial</span><span class="p">(</span><span class="n">vnf</span><span class="p">,</span> <span class="n">nodeVolt</span><span class="o">=</span><span class="n">nodeVolt</span><span class="p">,</span> <span class="n">Req</span><span class="o">=</span><span class="n">reqs</span><span class="p">,</span> <span class="n">Rh</span><span class="o">=</span><span class="n">Rh</span><span class="p">)</span>
+    <span class="n">vnvf</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">vectorize</span><span class="p">(</span><span class="n">vnfp</span><span class="p">)</span>
+    <span class="n">vnvf</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">arange</span><span class="p">(</span><span class="n">nbits</span><span class="o">-</span><span class="mi">1</span><span class="p">)[::</span><span class="o">-</span><span class="mi">1</span><span class="p">])</span> <span class="c1"># compute the node voltages at each node</span>
+    <span class="n">nodeVolt</span> <span class="o">=</span> <span class="n">nodeVolt</span><span class="p">[::</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span> <span class="c1"># flip</span>
+    <span class="c1"># compute the equivalent currents at each vertical resistor in case the bit is ON</span>
+    <span class="n">currents</span> <span class="o">=</span> <span class="n">nodeVolt</span> <span class="o">/</span> <span class="n">Rv</span>
+
+    <span class="n">codes</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">arange</span><span class="p">(</span><span class="mi">2</span><span class="o">**</span><span class="n">nbits</span><span class="p">)</span>
+    <span class="n">incodes_bin</span> <span class="o">=</span> <span class="n">dec2bin</span><span class="p">(</span><span class="n">codes</span><span class="p">,</span> <span class="n">nbits</span><span class="p">)</span>
+    <span class="c1"># compute the output currents for each input code </span>
+    <span class="n">current_out</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="n">np</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">currents</span><span class="p">[</span><span class="n">incode</span> <span class="o">==</span> <span class="mi">1</span><span class="p">])</span> <span class="k">for</span> <span class="n">incode</span> <span class="ow">in</span> <span class="n">incodes_bin</span><span class="p">])</span>
+    <span class="c1"># compute the output voltage for each input code</span>
+    <span class="n">vout</span> <span class="o">=</span> <span class="o">-</span><span class="n">current_out</span><span class="o">*</span><span class="n">Rf</span>
+
+    <span class="c1"># compute the DNL and INL, and the effective number of bits of the DAC</span>
+    <span class="n">vlsb_measured</span> <span class="o">=</span> <span class="p">(</span><span class="n">vout</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span> <span class="o">-</span> <span class="n">vout</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span><span class="o">/</span><span class="p">(</span><span class="mi">2</span><span class="o">**</span><span class="n">nbits</span><span class="o">-</span><span class="mi">1</span><span class="p">)</span>
+    <span class="n">dnl</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">diff</span><span class="p">(</span><span class="n">vout</span><span class="p">)</span><span class="o">/</span><span class="n">vlsb_measured</span> <span class="o">-</span> <span class="mi">1</span>
+    <span class="n">inl</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="mi">0</span><span class="p">]</span> <span class="o">+</span> <span class="n">np</span><span class="o">.</span><span class="n">cumsum</span><span class="p">(</span><span class="n">dnl</span><span class="p">)</span><span class="o">.</span><span class="n">tolist</span><span class="p">())</span>
+    <span class="c1"># compute the effective number of bits of the DAC</span>
+    <span class="n">dac_linearity</span> <span class="o">=</span> <span class="n">nbits</span> <span class="o">-</span> <span class="n">np</span><span class="o">.</span><span class="n">log2</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">max</span><span class="p">(</span><span class="n">inl</span><span class="p">)</span> <span class="o">-</span> <span class="n">np</span><span class="o">.</span><span class="n">min</span><span class="p">(</span><span class="n">inl</span><span class="p">))</span>
+    <span class="n">dac_res</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">dac_linearity</span><span class="p">)</span>
+</code></pre></div>
+
+<div class="codehilite"><pre><span></span><code><span class="n">fig</span><span class="p">,</span> <span class="n">ax</span> <span class="o">=</span> <span class="n">plt</span><span class="o">.</span><span class="n">subplots</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span><span class="mi">1</span><span class="p">,</span> <span class="n">figsize</span><span class="o">=</span><span class="p">(</span><span class="mi">4</span><span class="p">,</span><span class="mi">4</span><span class="p">))</span>
+<span class="n">sns</span><span class="o">.</span><span class="n">histplot</span><span class="p">(</span><span class="n">dac_res</span><span class="p">,</span> <span class="n">ax</span><span class="o">=</span><span class="n">ax</span><span class="p">,</span> <span class="n">stat</span><span class="o">=</span><span class="s2">&quot;probability&quot;</span><span class="p">,</span> <span class="n">kde</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+<span class="n">ax</span><span class="o">.</span><span class="n">set_xlabel</span><span class="p">(</span><span class="s1">&#39;effective number of bits&#39;</span><span class="p">)</span>
+<span class="n">ax</span><span class="o">.</span><span class="n">set_ylabel</span><span class="p">(</span><span class="s1">&#39;probability density function of each circuit&#39;</span><span class="p">)</span>
+<span class="n">ax</span><span class="o">.</span><span class="n">grid</span><span class="p">(</span><span class="kc">True</span><span class="p">)</span>
+<span class="n">ax</span><span class="o">.</span><span class="n">set_title</span><span class="p">(</span><span class="s1">&#39;DAC resolution distribution against resistor mismatch&#39;</span><span class="p">)</span>
+</code></pre></div>
+
+<div class="codehilite"><pre><span></span><code>Text(0.5, 1.0, &#39;DAC resolution distribution against resistor mismatch&#39;)
+</code></pre></div>
+
+<p><img alt="png" src="practical_class_6_files/practical_class_6_35_1.png" /></p>
+<p align="justify">
+From the above histogram it is possible to observe that although the R-2R DAC uses much less hardware, drastically reducing the number of resistors to 2N + 1, it is much more sensitive to resistor mismatch than the binary weighted resistor DAC. The decreasing voltage at each successive node of the R-2R array is successively more sensitive to resistor mismatch, as the mismatch at higher voltage nodes is much more critical than the mismatch at lower voltage nodes.
 </p></div>
             </div>
         </div>
