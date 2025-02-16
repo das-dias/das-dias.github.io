@@ -40,7 +40,7 @@
                                 <a href="./" class="nav-link">Signal-Converters</a>
                             </li>
                             <li class="navitem">
-                                <a href="../computational_electromagnetics/" class="nav-link">Computational Electromagnetics</a>
+                                <a href="../signoff_tools/" class="nav-link">Signoff Tools</a>
                             </li>
                         </ul>
 
@@ -56,7 +56,7 @@
                                 </a>
                             </li>
                             <li class="nav-item">
-                                <a rel="next" href="../computational_electromagnetics/" class="nav-link">
+                                <a rel="next" href="../signoff_tools/" class="nav-link">
                                     Next <i class="fa fa-arrow-right"></i>
                                 </a>
                             </li>
@@ -1848,13 +1848,13 @@ Let us answer those questions in this section.</p>
 <p>The settling error can be computed through:
 $$
 \begin{align}
-\epsilon_{S} &amp;= \frac{V^*<em out="out">{out} - V</em>}{V_{out}} = e^{-\frac{T_{CLK}}{\tau}} \
+\epsilon_{S} &amp;= \frac{V^*<em out="out">{out} - V</em> \
 \end{align}
-$$</p>
-<p>where $V_{out} = V_{REF}\frac{R2}{R2 + R1}$ is the ideal output voltage at the end of the half-clock period, and $V^<em><em REF="REF">{out}(t) = V</em>\frac{R2}{R2 + R1}(1-e^{-\frac{t}{\tau}})$ is the actual observed final output voltage. The RC time constant of the output node is given by:
+$$}}{V_{out}} = e^{-\frac{T_{CLK}}{\tau}</p>
+<p>where $V_{out} = V_{REF}\frac{R2}{R2 + R1}$ is the ideal output voltage at the end of the half-clock period, and $V^<em><em REF="REF">{out}(t) = V</em>)$ is the actual observed final output voltage. The RC time constant of the output node is given by:
 $$
 \begin{align}
-\tau &amp;= (C_L + C_P)</em>( R1 // R2 + R_{SW}) \hspace{4pt} \text{(s)}
+\tau &amp;= (C_L + C_P)}\frac{R2}{R2 + R1}(1-e^{-\frac{t}{\tau}</em>( R1 // R2 + R_{SW}) \hspace{4pt} \text{(s)}
 \end{align}
 $$</p>
 <p>where $C_L$ is the load capacitance, $C_P$ is the node parasitic capacitance, $R1$ and $R2$ are the top and bottom equivalent resistances of the DAC ladder, and $R_{SW}$ is the switch ON resistance.</p>

@@ -1,0 +1,942 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <meta charset="utf-8">
+        <meta http-equiv="X-UA-Compatible" content="IE=edge">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        
+        <meta name="author" content="das-dias">
+        <link rel="canonical" href="https://das-dias.github.io/signoff_tools/">
+        <link rel="shortcut icon" href="../img/favicon.ico">
+        <title>Signoff Tools - Diogo André Silvares Dias</title>
+        <link href="../css/bootstrap.min.css" rel="stylesheet">
+        <link href="../css/font-awesome.min.css" rel="stylesheet">
+        <link href="../css/base.css" rel="stylesheet">
+        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/styles/night-owl.min.css">
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/highlight.min.js"></script>
+        <script>hljs.highlightAll();</script> 
+    </head>
+
+    <body>
+        <div class="navbar fixed-top navbar-expand-lg navbar-dark bg-primary">
+            <div class="container">
+                <a class="navbar-brand" href="..">Diogo André Silvares Dias</a>
+                <!-- Expander button -->
+                <button type="button" class="navbar-toggler" data-toggle="collapse" data-target="#navbar-collapse">
+                    <span class="navbar-toggler-icon"></span>
+                </button>
+
+                <!-- Expanded navigation -->
+                <div id="navbar-collapse" class="navbar-collapse collapse">
+                        <!-- Main navigation -->
+                        <ul class="nav navbar-nav">
+                            <li class="navitem">
+                                <a href=".." class="nav-link">Home</a>
+                            </li>
+                            <li class="navitem">
+                                <a href="../misc/" class="nav-link">Miscellaneous</a>
+                            </li>
+                            <li class="navitem">
+                                <a href="../signal_converters/" class="nav-link">Signal-Converters</a>
+                            </li>
+                            <li class="navitem active">
+                                <a href="./" class="nav-link">Signoff Tools</a>
+                            </li>
+                        </ul>
+
+                    <ul class="nav navbar-nav ml-auto">
+                        <li class="nav-item">
+                            <a href="#" class="nav-link" data-toggle="modal" data-target="#mkdocs_search_modal">
+                                <i class="fa fa-search"></i> Search
+                            </a>
+                        </li>
+                            <li class="nav-item">
+                                <a rel="prev" href="../signal_converters/" class="nav-link">
+                                    <i class="fa fa-arrow-left"></i> Previous
+                                </a>
+                            </li>
+                            <li class="nav-item">
+                                <a rel="next" class="nav-link disabled">
+                                    Next <i class="fa fa-arrow-right"></i>
+                                </a>
+                            </li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+
+        <div class="container">
+            <div class="row">
+                    <div class="col-md-3"><div class="navbar-light navbar-expand-md bs-sidebar hidden-print affix" role="complementary">
+    <div class="navbar-header">
+        <button type="button" class="navbar-toggler collapsed" data-toggle="collapse" data-target="#toc-collapse" title="Table of Contents">
+            <span class="fa fa-angle-down"></span>
+        </button>
+    </div>
+
+    
+    <div id="toc-collapse" class="navbar-collapse collapse card bg-secondary">
+        <ul class="nav flex-column">
+            
+            <li class="nav-item" data-level="1"><a href="#ir-drop-signoff-tool-example" class="nav-link">IR Drop Signoff Tool Example</a>
+              <ul class="nav flex-column">
+              </ul>
+            </li>
+        </ul>
+    </div>
+</div></div>
+                    <div class="col-md-9" role="main">
+
+<p>Signoff verification is the final step before sending a chip to manufacturing, ensuring 
+that the chip doesn't violate essential physical limitations of the employed PDK. However, 
+the required full-chip extraction of IR Drop, current density and parasitics for post-layout simulations are very expensive computationally.</p>
+<p>There's been a growing trend on the development of Machine-Learning (ML) assisted signoff tools, shifting the delay it takes to get the results using classical solvers and extractors to a delay during the training phase of the ML-assisted extractor, significantly speeding up the actual signoff simulations using predicted values from the pre-trained regressor and inferece made by the AI-model.</p>
+<p>However, for training these models, it is necessary to develop accurate (enough) solvers that generate a user-oriented report (output data of the model) from the input chip GDS information (input data of the model). </p>
+<h1 id="ir-drop-signoff-tool-example">IR Drop Signoff Tool Example</h1>
+<p>In the following example, an IR drop extractor is developed using square-counting to measure the resistance-distance between an input PAD of the IC and every-other node of the traced net. This simulation is specially usefull to observe the resistance between the input PAD and every end node of a Power net of the chip - distributing the power to each independant IC of the chip. This verification step is essential to ensure the Power Distribution Net (PDN) is well designed, which becomes a critical verification step in power (HV) ASICs.</p>
+<div class="codehilite"><pre><span></span><code><span class="o">%%</span><span class="n">file</span> <span class="n">requirements</span><span class="o">.</span><span class="n">txt</span>
+<span class="n">numpy</span>
+<span class="n">networkx</span>
+<span class="n">gdstk</span>
+<span class="n">plotly</span>
+<span class="n">ipyvolume</span>
+<span class="n">networkx</span>
+<span class="n">tqdm</span>
+<span class="n">jupyter</span>
+<span class="n">nbconvert</span>
+<span class="n">nbformat</span>
+<span class="n">scipy</span>
+</code></pre></div>
+
+<div class="codehilite"><pre><span></span><code>Overwriting requirements.txt
+</code></pre></div>
+
+<div class="codehilite"><pre><span></span><code><span class="o">%</span><span class="n">pip</span> <span class="n">install</span> <span class="o">-</span><span class="n">r</span> <span class="n">requirements</span><span class="o">.</span><span class="n">txt</span>
+</code></pre></div>
+
+<p>Filter out important drawing layers</p>
+<div class="codehilite"><pre><span></span><code><span class="n">layers</span> <span class="o">=</span> <span class="p">{</span>
+    <span class="p">(</span><span class="mi">2</span><span class="p">,</span><span class="mi">0</span><span class="p">):</span> <span class="p">(</span><span class="s2">&quot;met1&quot;</span><span class="p">,</span> <span class="s2">&quot;drawing&quot;</span><span class="p">,</span> <span class="s2">&quot;metal 1&quot;</span><span class="p">),</span>
+    <span class="p">(</span><span class="mi">2</span><span class="p">,</span><span class="mi">1</span><span class="p">):</span> <span class="p">(</span><span class="s2">&quot;via&quot;</span><span class="p">,</span> <span class="s2">&quot;via&quot;</span><span class="p">,</span> <span class="s2">&quot;metal 1 to metal 2 via&quot;</span><span class="p">),</span>
+    <span class="p">(</span><span class="mi">3</span><span class="p">,</span><span class="mi">0</span><span class="p">):</span> <span class="p">(</span><span class="s2">&quot;met2&quot;</span><span class="p">,</span> <span class="s2">&quot;drawing&quot;</span><span class="p">,</span> <span class="s2">&quot;metal 2&quot;</span><span class="p">),</span>
+<span class="p">}</span>
+</code></pre></div>
+
+<div class="codehilite"><pre><span></span><code><span class="n">connect_map</span> <span class="o">=</span> <span class="p">{</span>
+    <span class="s2">&quot;met1&quot;</span><span class="p">:</span> <span class="s2">&quot;via&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;via&quot;</span><span class="p">:</span> <span class="s2">&quot;met2&quot;</span><span class="p">,</span>
+<span class="p">}</span>
+</code></pre></div>
+
+<div class="codehilite"><pre><span></span><code><span class="k">def</span> <span class="nf">get_layer_by_name</span><span class="p">(</span><span class="n">layers</span><span class="p">,</span> <span class="n">name</span><span class="p">):</span>
+    <span class="k">for</span> <span class="n">k</span><span class="p">,</span> <span class="n">v</span> <span class="ow">in</span> <span class="n">layers</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+        <span class="k">if</span> <span class="n">v</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">==</span> <span class="n">name</span> <span class="ow">and</span> <span class="p">(</span><span class="n">v</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">==</span> <span class="s2">&quot;drawing&quot;</span> <span class="ow">or</span> <span class="n">v</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">==</span> <span class="s2">&quot;via&quot;</span><span class="p">):</span>
+            <span class="k">return</span> <span class="n">k</span>
+    <span class="k">return</span> <span class="kc">None</span>
+</code></pre></div>
+
+<div class="codehilite"><pre><span></span><code><span class="n">get_layer_by_name</span><span class="p">(</span><span class="n">layers</span><span class="p">,</span> <span class="s2">&quot;via&quot;</span><span class="p">)</span>
+</code></pre></div>
+
+<div class="codehilite"><pre><span></span><code>(2, 1)
+</code></pre></div>
+
+<p>Import gds of the test layout</p>
+<div class="codehilite"><pre><span></span><code><span class="kn">import</span> <span class="nn">gdstk</span>
+<span class="n">lib</span> <span class="o">=</span> <span class="n">gdstk</span><span class="o">.</span><span class="n">read_gds</span><span class="p">(</span><span class="s1">&#39;../data/crossed_metal_slotted_ref_withport.gds&#39;</span><span class="p">)</span>
+</code></pre></div>
+
+<div class="codehilite"><pre><span></span><code><span class="n">lib</span><span class="o">.</span><span class="n">name</span><span class="p">,</span> <span class="n">lib</span><span class="o">.</span><span class="n">top_level</span><span class="p">()[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">name</span>
+</code></pre></div>
+
+<div class="codehilite"><pre><span></span><code>(&#39;LIB&#39;, &#39;crossed_metal&#39;)
+</code></pre></div>
+
+<p>Flatten hierarchy and trace power nets (vss and vdd)</p>
+<div class="codehilite"><pre><span></span><code><span class="kn">from</span> <span class="nn">collections</span> <span class="kn">import</span> <span class="n">defaultdict</span>
+<span class="kn">from</span> <span class="nn">itertools</span> <span class="kn">import</span> <span class="n">chain</span>
+<span class="kn">from</span> <span class="nn">tqdm</span> <span class="kn">import</span> <span class="n">tqdm</span>
+
+<span class="n">top_cell</span> <span class="o">=</span> <span class="n">lib</span><span class="o">.</span><span class="n">top_level</span><span class="p">()[</span><span class="mi">0</span><span class="p">]</span>
+<span class="n">new_cell</span> <span class="o">=</span> <span class="n">gdstk</span><span class="o">.</span><span class="n">Cell</span><span class="p">(</span><span class="n">top_cell</span><span class="o">.</span><span class="n">name</span><span class="p">)</span>
+
+<span class="k">for</span> <span class="n">layer</span> <span class="ow">in</span> <span class="n">tqdm</span><span class="p">(</span><span class="n">layers</span><span class="o">.</span><span class="n">keys</span><span class="p">()):</span>
+  <span class="n">layer_polys</span> <span class="o">=</span> <span class="n">top_cell</span><span class="o">.</span><span class="n">get_polygons</span><span class="p">(</span><span class="n">layer</span><span class="o">=</span><span class="n">layer</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">datatype</span><span class="o">=</span><span class="n">layer</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span> <span class="n">depth</span><span class="o">=</span><span class="mi">3</span><span class="p">,</span> <span class="n">include_paths</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+  <span class="n">united_layer</span> <span class="o">=</span> <span class="n">gdstk</span><span class="o">.</span><span class="n">boolean</span><span class="p">(</span><span class="n">layer_polys</span><span class="p">,</span> <span class="n">layer_polys</span><span class="p">,</span> <span class="s2">&quot;or&quot;</span><span class="p">,</span> <span class="n">layer</span><span class="o">=</span><span class="n">layer</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">datatype</span><span class="o">=</span><span class="n">layer</span><span class="p">[</span><span class="mi">1</span><span class="p">])</span>
+  <span class="p">[</span><span class="n">new_cell</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="n">pol</span><span class="p">)</span> <span class="k">for</span> <span class="n">pol</span> <span class="ow">in</span> <span class="n">united_layer</span><span class="p">]</span>
+</code></pre></div>
+
+<div class="codehilite"><pre><span></span><code><span class="mf">100</span><span class="err">%|██████████|</span><span class="w"> </span><span class="mf">3</span><span class="o">/</span><span class="mf">3</span><span class="w"> </span><span class="err">[</span><span class="mf">00</span><span class="p">:</span><span class="mf">00</span><span class="o">&lt;</span><span class="mf">00</span><span class="p">:</span><span class="mf">00</span><span class="p">,</span><span class="w"> </span><span class="mf">2727.12</span><span class="n">it</span><span class="o">/</span><span class="n">s</span><span class="err">]</span><span class="w"></span>
+</code></pre></div>
+
+<div class="codehilite"><pre><span></span><code><span class="k">def</span> <span class="nf">intersects</span><span class="p">(</span><span class="n">op1</span><span class="p">,</span> <span class="n">op2</span><span class="p">):</span>
+  <span class="n">result</span> <span class="o">=</span> <span class="n">gdstk</span><span class="o">.</span><span class="n">boolean</span><span class="p">(</span><span class="n">op1</span><span class="p">,</span> <span class="n">op2</span><span class="p">,</span> <span class="s2">&quot;and&quot;</span><span class="p">,</span> <span class="n">layer</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="n">datatype</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
+  <span class="k">return</span> <span class="n">result</span> <span class="o">!=</span> <span class="p">[]</span> <span class="ow">and</span> <span class="n">result</span> <span class="o">!=</span> <span class="kc">None</span>
+</code></pre></div>
+
+<div class="codehilite"><pre><span></span><code><span class="kn">import</span> <span class="nn">networkx</span> <span class="k">as</span> <span class="nn">nx</span>
+<span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
+
+<span class="n">connectivity_graph</span> <span class="o">=</span> <span class="n">nx</span><span class="o">.</span><span class="n">Graph</span><span class="p">()</span>
+<span class="c1">#extract polygon connectivity graph</span>
+
+<span class="k">for</span> <span class="n">bot_layer</span> <span class="ow">in</span> <span class="n">tqdm</span><span class="p">(</span><span class="nb">list</span><span class="p">(</span><span class="n">connect_map</span><span class="o">.</span><span class="n">keys</span><span class="p">())):</span>
+  <span class="n">top_layer</span> <span class="o">=</span> <span class="n">connect_map</span><span class="p">[</span><span class="n">bot_layer</span><span class="p">]</span>
+  <span class="n">top_ld</span> <span class="o">=</span> <span class="n">get_layer_by_name</span><span class="p">(</span><span class="n">layers</span><span class="p">,</span> <span class="n">top_layer</span><span class="p">)</span>
+  <span class="n">bot_ld</span> <span class="o">=</span> <span class="n">get_layer_by_name</span><span class="p">(</span><span class="n">layers</span><span class="p">,</span> <span class="n">bot_layer</span><span class="p">)</span>
+  <span class="n">bot_polys</span> <span class="o">=</span> <span class="n">new_cell</span><span class="o">.</span><span class="n">get_polygons</span><span class="p">(</span><span class="n">layer</span><span class="o">=</span><span class="n">bot_ld</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">datatype</span><span class="o">=</span><span class="n">bot_ld</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span> <span class="n">depth</span><span class="o">=-</span><span class="mi">1</span><span class="p">,</span> <span class="n">include_paths</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+  <span class="n">top_polys</span> <span class="o">=</span> <span class="n">new_cell</span><span class="o">.</span><span class="n">get_polygons</span><span class="p">(</span><span class="n">layer</span><span class="o">=</span><span class="n">top_ld</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">datatype</span><span class="o">=</span><span class="n">top_ld</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span> <span class="n">depth</span><span class="o">=-</span><span class="mi">1</span><span class="p">,</span> <span class="n">include_paths</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+  <span class="k">for</span> <span class="n">j</span><span class="p">,</span> <span class="n">bot_poly</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">bot_polys</span><span class="p">):</span>
+    <span class="k">for</span> <span class="n">k</span><span class="p">,</span> <span class="n">top_poly</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">top_polys</span><span class="p">):</span>
+      <span class="k">if</span> <span class="n">intersects</span><span class="p">(</span><span class="n">bot_poly</span><span class="p">,</span> <span class="n">top_poly</span><span class="p">):</span>
+        <span class="n">n1</span> <span class="o">=</span> <span class="p">(</span><span class="o">*</span><span class="n">bot_ld</span><span class="p">,</span> <span class="n">j</span><span class="p">)</span>
+        <span class="n">n2</span> <span class="o">=</span> <span class="p">(</span><span class="o">*</span><span class="n">top_ld</span><span class="p">,</span> <span class="n">k</span><span class="p">)</span>
+        <span class="n">connectivity_graph</span><span class="o">.</span><span class="n">add_edge</span><span class="p">(</span><span class="n">n1</span><span class="p">,</span> <span class="n">n2</span><span class="p">)</span>
+
+<span class="n">sub_graphs</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="nb">list</span><span class="p">(</span><span class="n">nx</span><span class="o">.</span><span class="n">connected_components</span><span class="p">(</span><span class="n">connectivity_graph</span><span class="p">)))</span>
+<span class="n">sub_graph_lens</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="nb">len</span><span class="p">(</span><span class="n">sg</span><span class="p">)</span> <span class="k">for</span> <span class="n">sg</span> <span class="ow">in</span> <span class="n">sub_graphs</span><span class="p">])</span>
+<span class="n">net_graphs</span> <span class="o">=</span> <span class="p">[</span>
+  <span class="n">connectivity_graph</span><span class="o">.</span><span class="n">subgraph</span><span class="p">(</span><span class="n">sg</span><span class="p">)</span> <span class="k">for</span> <span class="n">sg</span> <span class="ow">in</span> <span class="n">sub_graphs</span><span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">argsort</span><span class="p">(</span><span class="n">sub_graph_lens</span><span class="p">)][::</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span>
+<span class="p">]</span>
+</code></pre></div>
+
+<div class="codehilite"><pre><span></span><code><span class="w">  </span><span class="mf">0</span><span class="o">%|</span><span class="w">          </span><span class="o">|</span><span class="w"> </span><span class="mf">0</span><span class="o">/</span><span class="mf">2</span><span class="w"> </span><span class="p">[</span><span class="mo">00</span><span class="o">:</span><span class="mo">00</span><span class="cp">&lt;?</span><span class="p">,</span> <span class="o">?</span><span class="nx">it</span><span class="o">/</span><span class="nx">s</span><span class="p">]</span>
+
+<span class="mi">100</span><span class="o">%|</span><span class="nx">██████████</span><span class="o">|</span> <span class="mi">2</span><span class="o">/</span><span class="mi">2</span> <span class="p">[</span><span class="mo">00</span><span class="o">:</span><span class="mo">00</span><span class="o">&lt;</span><span class="mo">00</span><span class="o">:</span><span class="mo">00</span><span class="p">,</span> <span class="mf">167.14</span><span class="nx">it</span><span class="o">/</span><span class="nx">s</span><span class="p">]</span>
+</code></pre></div>
+
+<div class="codehilite"><pre><span></span><code><span class="nb">len</span><span class="p">(</span><span class="n">net_graphs</span><span class="p">),</span> <span class="n">nx</span><span class="o">.</span><span class="n">draw</span><span class="p">(</span><span class="n">net_graphs</span><span class="p">[</span><span class="mi">1</span><span class="p">])</span>
+</code></pre></div>
+
+<div class="codehilite"><pre><span></span><code>(2, None)
+</code></pre></div>
+
+<p><img alt="png" src="../3D_signoff_IR_files/3D_signoff_IR_14_1.png" /></p>
+<p>Discretize flattened power nets into squares and build a graph of connected neighbouring squares</p>
+<div class="codehilite"><pre><span></span><code><span class="k">def</span> <span class="nf">check_point_inside_polygon</span><span class="p">(</span><span class="n">polygon</span><span class="p">,</span> <span class="n">point</span><span class="p">:</span> <span class="nb">tuple</span> <span class="o">=</span> <span class="p">(),)</span> <span class="o">-&gt;</span> <span class="nb">bool</span><span class="p">:</span>
+    <span class="sd">&quot;&quot;&quot;_summary_</span>
+<span class="sd">    Checks if a point is inside a polygon</span>
+<span class="sd">    Args:</span>
+<span class="sd">        polygon (Polygon): Polygon Set object</span>
+<span class="sd">        point   (list)      : [x:float, y: float] items list</span>
+<span class="sd">    Returns:</span>
+<span class="sd">        bool: returns wether the point is inside the polygon or not</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">return</span> <span class="n">gdstk</span><span class="o">.</span><span class="n">inside</span><span class="p">([</span><span class="n">point</span><span class="p">],</span> <span class="n">polygon</span><span class="p">)[</span><span class="mi">0</span><span class="p">]</span>
+
+
+<span class="k">def</span> <span class="nf">check_polygon_overlap</span><span class="p">(</span>
+    <span class="n">polygonA</span><span class="p">,</span> <span class="n">polygonB</span><span class="p">,</span> <span class="n">layer</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">0</span><span class="p">,</span> <span class="n">datatype</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">0</span><span class="p">,</span> <span class="n">precision</span><span class="o">=</span><span class="mf">1e-3</span><span class="p">,</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">:</span>
+    <span class="sd">&quot;&quot;&quot;_summary_</span>
+<span class="sd">    Checks if two polygons overlap, and</span>
+<span class="sd">    returns the overlapping region, in case they do</span>
+<span class="sd">    Args:</span>
+<span class="sd">        polygonA (Polygon): Polygon object</span>
+<span class="sd">        polygonB (Polygon): Polygon object</span>
+<span class="sd">        layer    (int)       : layer of the resulting polygon from the boolean operation</span>
+<span class="sd">        dataType (int)       : datatype of the resulting polygon from the boolean operation</span>
+<span class="sd">        precision(float)     : precision of the cuts</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">polyList</span> <span class="o">=</span> <span class="n">gdstk</span><span class="o">.</span><span class="n">boolean</span><span class="p">(</span>
+        <span class="n">polygonA</span><span class="p">,</span> <span class="n">polygonB</span><span class="p">,</span> <span class="s2">&quot;and&quot;</span><span class="p">,</span> <span class="n">layer</span><span class="o">=</span><span class="n">layer</span><span class="p">,</span> <span class="n">datatype</span><span class="o">=</span><span class="n">datatype</span><span class="p">,</span> <span class="n">precision</span><span class="o">=</span><span class="n">precision</span>
+    <span class="p">)</span>
+    <span class="k">return</span> <span class="n">polyList</span> <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">polyList</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">0</span> <span class="k">else</span> <span class="kc">None</span>
+
+
+<span class="k">def</span> <span class="nf">bool_polygon_overlap_check</span><span class="p">(</span><span class="n">polygonA</span><span class="p">,</span> <span class="n">polygonB</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">bool</span><span class="p">:</span>
+    <span class="sd">&quot;&quot;&quot;_summary_</span>
+<span class="sd">    Performs a boolean check</span>
+<span class="sd">    to infer if the two polygons overlap</span>
+<span class="sd">    Args:</span>
+<span class="sd">        polygonA (Polygon): Polygon object</span>
+<span class="sd">        polygonB (Polygon): Polygon object</span>
+<span class="sd">    Returns:</span>
+<span class="sd">        bool:   returns wether the two polygons overlap or not</span>
+<span class="sd">                True: They overlap; False: They don&#39;t overlap</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">return</span> <span class="n">check_polygon_overlap</span><span class="p">(</span><span class="n">polygonA</span><span class="p">,</span> <span class="n">polygonB</span><span class="p">)</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span>
+
+
+<span class="k">def</span> <span class="nf">check_neighbour_polygons</span><span class="p">(</span><span class="n">poly_a</span><span class="p">,</span> <span class="n">poly_b</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">bool</span><span class="p">:</span>
+    <span class="sd">&quot;&quot;&quot;_summary_</span>
+<span class="sd">    Checks if the two polygons have common edges and don&#39;t overlap!</span>
+<span class="sd">    Args:</span>
+<span class="sd">        polygonA (Polygon): Polygon object</span>
+<span class="sd">        polygonB (Polygon): Polygon object</span>
+<span class="sd">    Returns:</span>
+<span class="sd">        bool:   returns wether the two polygons have common edges</span>
+<span class="sd">            True: They are neighbours; False: They aren&#39;t neighbours</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">if</span> <span class="n">poly_a</span><span class="o">.</span><span class="n">layer</span> <span class="o">==</span> <span class="n">poly_b</span><span class="o">.</span><span class="n">layer</span> <span class="ow">and</span> <span class="n">poly_a</span><span class="o">.</span><span class="n">datatype</span> <span class="o">==</span> <span class="n">poly_b</span><span class="o">.</span><span class="n">datatype</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">gdstk</span><span class="o">.</span><span class="n">any_inside</span><span class="p">(</span><span class="n">poly_a</span><span class="o">.</span><span class="n">points</span><span class="p">,</span> <span class="n">poly_b</span><span class="p">)</span>
+    <span class="k">return</span> <span class="kc">False</span>
+
+
+<span class="k">def</span> <span class="nf">check_same_polygon</span><span class="p">(</span><span class="n">poly_a</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">poly_b</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">precision</span><span class="o">=</span><span class="mf">1e-3</span><span class="p">,)</span> <span class="o">-&gt;</span> <span class="nb">bool</span><span class="p">:</span>
+    <span class="sd">&quot;&quot;&quot;_summary_</span>
+<span class="sd">    Checks if two polygons are the same</span>
+<span class="sd">    Args:</span>
+<span class="sd">        poly_a       (np.array)  : vertices of the polygon</span>
+<span class="sd">        poly_b       (np.array)  : vertices of the polygon</span>
+<span class="sd">        precision   (float)     : precision of the comparison</span>
+<span class="sd">    Returns:</span>
+<span class="sd">        bool: returns wether the two polygons are the same or not</span>
+<span class="sd">                True : They are the same; False: They are not the same</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="c1"># check if the layers and datatype are the same</span>
+    <span class="k">if</span> <span class="n">poly_a</span><span class="o">.</span><span class="n">layer</span> <span class="o">!=</span> <span class="n">poly_b</span><span class="o">.</span><span class="n">layer</span><span class="p">:</span>
+        <span class="k">return</span> <span class="kc">False</span>
+    <span class="k">if</span> <span class="n">poly_a</span><span class="o">.</span><span class="n">datatype</span> <span class="o">!=</span> <span class="n">poly_b</span><span class="o">.</span><span class="n">datatype</span><span class="p">:</span>
+        <span class="k">return</span> <span class="kc">False</span>
+    <span class="c1"># check if the interception of the two polygons is equal to both of them, or</span>
+    <span class="c1"># if the not operation (poly_a - poly_b) and (poly_b - poly_a) is equal to an empty space of points/polygons</span>
+    <span class="n">notAB</span> <span class="o">=</span> <span class="n">gdstk</span><span class="o">.</span><span class="n">boolean</span><span class="p">(</span><span class="n">poly_a</span><span class="p">,</span> <span class="n">poly_b</span><span class="p">,</span> <span class="s2">&quot;not&quot;</span><span class="p">,</span> <span class="n">precision</span><span class="o">=</span><span class="n">precision</span><span class="p">)</span>
+    <span class="n">notBA</span> <span class="o">=</span> <span class="n">gdstk</span><span class="o">.</span><span class="n">boolean</span><span class="p">(</span><span class="n">poly_b</span><span class="p">,</span> <span class="n">poly_a</span><span class="p">,</span> <span class="s2">&quot;not&quot;</span><span class="p">,</span> <span class="n">precision</span><span class="o">=</span><span class="n">precision</span><span class="p">)</span>
+    <span class="k">return</span> <span class="nb">len</span><span class="p">(</span><span class="n">notAB</span><span class="p">)</span> <span class="o">==</span> <span class="mi">0</span> <span class="ow">and</span> <span class="nb">len</span><span class="p">(</span><span class="n">notBA</span><span class="p">)</span> <span class="o">==</span> <span class="mi">0</span>
+
+
+<span class="k">def</span> <span class="nf">check_polygon_contains_polygon</span><span class="p">(</span><span class="n">poly_a</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">poly_b</span><span class="o">=</span><span class="kc">None</span><span class="p">,)</span> <span class="o">-&gt;</span> <span class="nb">bool</span><span class="p">:</span>
+    <span class="sd">&quot;&quot;&quot;_summary_</span>
+<span class="sd">    Checks if polygon A contains polygon B</span>
+<span class="sd">    Args:</span>
+<span class="sd">        poly_a       (np.array)  : vertices of the polygon</span>
+<span class="sd">        poly_b       (np.array)  : vertices of the polygon</span>
+<span class="sd">        maxPoints   (int)       : maximum number of points inside the polygon</span>
+<span class="sd">        precision   (float)     : precision of the comparison</span>
+<span class="sd">    Returns:</span>
+<span class="sd">        bool: returns wether polygon A contains polygon B or not</span>
+<span class="sd">                True : polygon A contains polygon B; False: polygon A doesn&#39;t contain polygon B</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="kn">from</span> <span class="nn">functools</span> <span class="kn">import</span> <span class="n">partial</span>
+    <span class="c1"># check if the layers and datatype are the same</span>
+    <span class="k">if</span> <span class="n">poly_a</span><span class="o">.</span><span class="n">layer</span> <span class="o">!=</span> <span class="n">poly_b</span><span class="o">.</span><span class="n">layer</span><span class="p">:</span>
+        <span class="k">return</span> <span class="kc">False</span>
+    <span class="k">if</span> <span class="n">poly_a</span><span class="o">.</span><span class="n">datatype</span> <span class="o">!=</span> <span class="n">poly_b</span><span class="o">.</span><span class="n">datatype</span><span class="p">:</span>
+        <span class="k">return</span> <span class="kc">False</span>
+    <span class="c1"># if the union of the two polygons is equal to the polygon A, then polygon A contains polygon B</span>
+    <span class="c1"># which is equal to checking if : (poly_a U poly_b) NOT poly_a == 0</span>
+    <span class="n">unionAB</span> <span class="o">=</span> <span class="n">gdstk</span><span class="o">.</span><span class="n">boolean</span><span class="p">(</span>
+        <span class="n">poly_a</span><span class="p">,</span> <span class="n">poly_b</span><span class="p">,</span> <span class="s2">&quot;or&quot;</span><span class="p">,</span> <span class="n">layer</span><span class="o">=</span><span class="n">poly_a</span><span class="o">.</span><span class="n">layer</span><span class="p">,</span> <span class="n">datatype</span><span class="o">=</span><span class="n">poly_a</span><span class="o">.</span><span class="n">datatype</span>
+    <span class="p">)</span>
+    <span class="n">mapFunc</span> <span class="o">=</span> <span class="n">partial</span><span class="p">(</span><span class="n">check_same_polygon</span><span class="p">,</span> <span class="n">poly_b</span><span class="o">=</span><span class="n">poly_a</span><span class="p">)</span>
+    <span class="n">mapVecFunc</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">vectorize</span><span class="p">(</span><span class="n">mapFunc</span><span class="p">,</span> <span class="n">otypes</span><span class="o">=</span><span class="p">[</span><span class="kc">None</span><span class="p">],</span> <span class="n">signature</span><span class="o">=</span><span class="s2">&quot;()-&gt;()&quot;</span><span class="p">)</span>
+    <span class="c1"># boolMap = [check_same_polygon(uniAB, poly_a) for uniAB in unionAB]</span>
+    <span class="n">boolMap</span> <span class="o">=</span> <span class="n">mapVecFunc</span><span class="p">(</span><span class="n">unionAB</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">all</span><span class="p">(</span><span class="n">boolMap</span><span class="p">)</span> <span class="ow">or</span> <span class="n">check_same_polygon</span><span class="p">(</span><span class="n">poly_a</span><span class="p">,</span> <span class="n">poly_b</span><span class="p">)</span>
+
+<span class="k">def</span> <span class="nf">fragment_polygon</span><span class="p">(</span><span class="n">poly</span><span class="p">:</span> <span class="n">gdstk</span><span class="o">.</span><span class="n">Polygon</span><span class="p">,</span> <span class="n">precision</span><span class="o">=</span><span class="mf">1e-3</span><span class="p">,)</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">:</span>
+    <span class="sd">&quot;&quot;&quot;Splits the polygon into a list of rectangular polygons.</span>
+<span class="sd">    Slices the polygon into multiple rectangular polygons along the y and x axis.</span>
+<span class="sd">    Args:</span>
+<span class="sd">        poly        (Polygon)   : the polygon to fragment</span>
+<span class="sd">        precision   (float)     : the precision to use</span>
+<span class="sd">    Returns:</span>
+<span class="sd">        list: the list of polygons resulting from the slicing</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">max_points</span> <span class="o">=</span> <span class="mi">5</span>  <span class="c1"># maximum of 5 nodes per polygons, to define a rectangle.</span>
+    <span class="n">frags</span> <span class="o">=</span> <span class="n">poly</span><span class="o">.</span><span class="n">fracture</span><span class="p">(</span><span class="n">max_points</span><span class="o">=</span><span class="n">max_points</span><span class="p">,</span> <span class="n">precision</span><span class="o">=</span><span class="n">precision</span><span class="p">)</span>
+    <span class="c1"># ey = [0,1,0]</span>
+    <span class="n">ex</span> <span class="o">=</span> <span class="p">[</span><span class="mf">1.0</span><span class="p">,</span> <span class="mf">0.0</span><span class="p">,</span> <span class="mf">0.0</span><span class="p">]</span>  <span class="c1"># x axis unitary vector</span>
+    <span class="n">sliced_frags</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="k">for</span> <span class="n">p</span> <span class="ow">in</span> <span class="n">frags</span><span class="p">:</span>
+        <span class="n">edge1</span> <span class="o">=</span> <span class="p">(</span><span class="n">p</span><span class="o">.</span><span class="n">points</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">p</span><span class="o">.</span><span class="n">points</span><span class="p">[</span><span class="mi">1</span><span class="p">])</span>
+        <span class="n">vector1</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="n">edge1</span><span class="p">[</span><span class="mi">1</span><span class="p">][</span><span class="mi">0</span><span class="p">]</span> <span class="o">-</span> <span class="n">edge1</span><span class="p">[</span><span class="mi">0</span><span class="p">][</span><span class="mi">0</span><span class="p">],</span> <span class="n">edge1</span><span class="p">[</span><span class="mi">1</span><span class="p">][</span><span class="mi">1</span><span class="p">]</span> <span class="o">-</span> <span class="n">edge1</span><span class="p">[</span><span class="mi">0</span><span class="p">][</span><span class="mi">1</span><span class="p">],</span> <span class="mi">0</span><span class="p">])</span>
+        <span class="n">length_edge1</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="n">vector1</span><span class="o">.</span><span class="n">dot</span><span class="p">(</span><span class="n">vector1</span><span class="p">))</span>
+        <span class="n">edge2</span> <span class="o">=</span> <span class="p">(</span><span class="n">p</span><span class="o">.</span><span class="n">points</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span> <span class="n">p</span><span class="o">.</span><span class="n">points</span><span class="p">[</span><span class="mi">2</span><span class="p">])</span>
+        <span class="n">vector2</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="n">edge2</span><span class="p">[</span><span class="mi">1</span><span class="p">][</span><span class="mi">0</span><span class="p">]</span> <span class="o">-</span> <span class="n">edge2</span><span class="p">[</span><span class="mi">0</span><span class="p">][</span><span class="mi">0</span><span class="p">],</span> <span class="n">edge2</span><span class="p">[</span><span class="mi">1</span><span class="p">][</span><span class="mi">1</span><span class="p">]</span> <span class="o">-</span> <span class="n">edge2</span><span class="p">[</span><span class="mi">0</span><span class="p">][</span><span class="mi">1</span><span class="p">],</span> <span class="mi">0</span><span class="p">])</span>
+        <span class="n">length_edge2</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="n">vector2</span><span class="o">.</span><span class="n">dot</span><span class="p">(</span><span class="n">vector2</span><span class="p">))</span>
+        <span class="c1"># check the colinearity of each of the edges with unit abciss vector</span>
+        <span class="n">crossprod_vec1</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">cross</span><span class="p">(</span><span class="n">ex</span><span class="p">,</span> <span class="n">vector1</span><span class="p">)</span>
+        <span class="n">xcol_vec1</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="n">crossprod_vec1</span><span class="o">.</span><span class="n">dot</span><span class="p">(</span><span class="n">crossprod_vec1</span><span class="p">))</span>
+        <span class="n">crossprod_vec2</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">cross</span><span class="p">(</span><span class="n">ex</span><span class="p">,</span> <span class="n">vector2</span><span class="p">)</span>
+        <span class="n">xcol_vec2</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="n">crossprod_vec2</span><span class="o">.</span><span class="n">dot</span><span class="p">(</span><span class="n">crossprod_vec2</span><span class="p">))</span>
+        <span class="n">slices</span> <span class="o">=</span> <span class="p">[</span><span class="n">p</span><span class="p">]</span>
+        <span class="n">cut_pos</span> <span class="o">=</span> <span class="kc">None</span>
+        <span class="k">if</span> <span class="n">xcol_vec1</span> <span class="o">&gt;</span> <span class="n">xcol_vec2</span><span class="p">:</span>
+            <span class="c1"># compute the slicing points for the polygon along the edge 2 orientation</span>
+            <span class="k">if</span> <span class="n">length_edge1</span> <span class="o">!=</span> <span class="mf">0.0</span> <span class="ow">and</span> <span class="n">length_edge2</span> <span class="o">&gt;</span> <span class="mf">1.0</span> <span class="o">*</span> <span class="n">length_edge1</span><span class="p">:</span>
+                <span class="n">cut_pos</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span>
+                    <span class="n">np</span><span class="o">.</span><span class="n">sort</span><span class="p">(</span>
+                        <span class="n">np</span><span class="o">.</span><span class="n">linspace</span><span class="p">(</span>
+                            <span class="n">edge2</span><span class="p">[</span><span class="mi">0</span><span class="p">][</span><span class="mi">0</span><span class="p">],</span>
+                            <span class="n">edge2</span><span class="p">[</span><span class="mi">1</span><span class="p">][</span><span class="mi">0</span><span class="p">],</span>
+                            <span class="n">num</span><span class="o">=</span><span class="nb">int</span><span class="p">(</span><span class="n">length_edge2</span> <span class="o">/</span> <span class="n">length_edge1</span><span class="p">)</span> <span class="o">+</span> <span class="mi">1</span><span class="p">,</span>
+                        <span class="p">)[</span><span class="mi">1</span><span class="p">:</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span>
+                    <span class="p">)</span>
+                <span class="p">)</span>
+                <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">cut_pos</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
+                    <span class="n">slices</span> <span class="o">=</span> <span class="n">gdstk</span><span class="o">.</span><span class="n">slice</span><span class="p">(</span><span class="n">p</span><span class="p">,</span> <span class="n">cut_pos</span><span class="p">,</span> <span class="s2">&quot;x&quot;</span><span class="p">,</span> <span class="n">precision</span><span class="o">=</span><span class="n">precision</span><span class="p">)</span>
+            <span class="k">elif</span> <span class="n">length_edge2</span> <span class="o">!=</span> <span class="mf">0.0</span> <span class="ow">and</span> <span class="n">length_edge1</span> <span class="o">&gt;</span> <span class="mf">1.0</span> <span class="o">*</span> <span class="n">length_edge2</span><span class="p">:</span>
+                <span class="n">cut_pos</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span>
+                    <span class="n">np</span><span class="o">.</span><span class="n">sort</span><span class="p">(</span>
+                        <span class="n">np</span><span class="o">.</span><span class="n">linspace</span><span class="p">(</span>
+                            <span class="n">edge1</span><span class="p">[</span><span class="mi">0</span><span class="p">][</span><span class="mi">1</span><span class="p">],</span>
+                            <span class="n">edge1</span><span class="p">[</span><span class="mi">1</span><span class="p">][</span><span class="mi">1</span><span class="p">],</span>
+                            <span class="n">num</span><span class="o">=</span><span class="nb">int</span><span class="p">(</span><span class="n">length_edge1</span> <span class="o">/</span> <span class="n">length_edge2</span><span class="p">)</span> <span class="o">+</span> <span class="mi">1</span><span class="p">,</span>
+                        <span class="p">)[</span><span class="mi">1</span><span class="p">:</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span>
+                    <span class="p">)</span>
+                <span class="p">)</span>
+                <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">cut_pos</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
+                    <span class="n">slices</span> <span class="o">=</span> <span class="n">gdstk</span><span class="o">.</span><span class="n">slice</span><span class="p">(</span><span class="n">p</span><span class="p">,</span> <span class="n">cut_pos</span><span class="p">,</span> <span class="s2">&quot;y&quot;</span><span class="p">,</span> <span class="n">precision</span><span class="o">=</span><span class="n">precision</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>  <span class="c1"># xcol_vec1 &lt;= xcol_vec2</span>
+            <span class="k">if</span> <span class="n">length_edge1</span> <span class="o">!=</span> <span class="mf">0.0</span> <span class="ow">and</span> <span class="n">length_edge2</span> <span class="o">&gt;</span> <span class="mf">1.0</span> <span class="o">*</span> <span class="n">length_edge1</span><span class="p">:</span>
+                <span class="n">cut_pos</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span>
+                    <span class="n">np</span><span class="o">.</span><span class="n">sort</span><span class="p">(</span>
+                        <span class="n">np</span><span class="o">.</span><span class="n">linspace</span><span class="p">(</span>
+                            <span class="n">edge2</span><span class="p">[</span><span class="mi">0</span><span class="p">][</span><span class="mi">1</span><span class="p">],</span>
+                            <span class="n">edge2</span><span class="p">[</span><span class="mi">1</span><span class="p">][</span><span class="mi">1</span><span class="p">],</span>
+                            <span class="n">num</span><span class="o">=</span><span class="nb">int</span><span class="p">(</span><span class="n">length_edge2</span> <span class="o">/</span> <span class="n">length_edge1</span><span class="p">)</span> <span class="o">+</span> <span class="mi">1</span><span class="p">,</span>
+                        <span class="p">)[</span><span class="mi">1</span><span class="p">:</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span>
+                    <span class="p">)</span>
+                <span class="p">)</span>
+                <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">cut_pos</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
+                    <span class="n">slices</span> <span class="o">=</span> <span class="n">gdstk</span><span class="o">.</span><span class="n">slice</span><span class="p">(</span><span class="n">p</span><span class="p">,</span> <span class="n">cut_pos</span><span class="p">,</span> <span class="s2">&quot;y&quot;</span><span class="p">,</span> <span class="n">precision</span><span class="o">=</span><span class="n">precision</span><span class="p">)</span>
+            <span class="k">elif</span> <span class="n">length_edge2</span> <span class="o">!=</span> <span class="mf">0.0</span> <span class="ow">and</span> <span class="n">length_edge1</span> <span class="o">&gt;</span> <span class="mf">1.0</span> <span class="o">*</span> <span class="n">length_edge2</span><span class="p">:</span>
+                <span class="n">cut_pos</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span>
+                    <span class="n">np</span><span class="o">.</span><span class="n">sort</span><span class="p">(</span>
+                        <span class="n">np</span><span class="o">.</span><span class="n">linspace</span><span class="p">(</span>
+                            <span class="n">edge1</span><span class="p">[</span><span class="mi">0</span><span class="p">][</span><span class="mi">0</span><span class="p">],</span>
+                            <span class="n">edge1</span><span class="p">[</span><span class="mi">1</span><span class="p">][</span><span class="mi">0</span><span class="p">],</span>
+                            <span class="n">num</span><span class="o">=</span><span class="nb">int</span><span class="p">(</span><span class="n">length_edge1</span> <span class="o">/</span> <span class="n">length_edge2</span><span class="p">)</span> <span class="o">+</span> <span class="mi">1</span><span class="p">,</span>
+                        <span class="p">)[</span><span class="mi">1</span><span class="p">:</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span>
+                    <span class="p">)</span>
+                <span class="p">)</span>
+                <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">cut_pos</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
+                    <span class="n">slices</span> <span class="o">=</span> <span class="n">gdstk</span><span class="o">.</span><span class="n">slice</span><span class="p">(</span><span class="n">p</span><span class="p">,</span> <span class="n">cut_pos</span><span class="p">,</span> <span class="s2">&quot;x&quot;</span><span class="p">,</span> <span class="n">precision</span><span class="o">=</span><span class="n">precision</span><span class="p">)</span>
+        <span class="k">try</span><span class="p">:</span>  <span class="c1"># the polygon was sliced and slices is a list of lists of polygons</span>
+            <span class="p">[</span><span class="n">sliced_frags</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">pol</span><span class="p">)</span> <span class="k">for</span> <span class="n">subslice</span> <span class="ow">in</span> <span class="n">slices</span> <span class="k">for</span> <span class="n">pol</span> <span class="ow">in</span> <span class="n">subslice</span><span class="p">]</span>
+        <span class="k">except</span> <span class="ne">TypeError</span> <span class="k">as</span> <span class="n">te</span><span class="p">:</span>  <span class="c1"># the polygon was too small to be sliced and slices is a list of polygons</span>
+            <span class="p">[</span><span class="n">sliced_frags</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">pol</span><span class="p">)</span> <span class="k">for</span> <span class="n">pol</span> <span class="ow">in</span> <span class="n">slices</span><span class="p">]</span>
+    <span class="k">return</span> <span class="n">sliced_frags</span> <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">sliced_frags</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">0</span> <span class="k">else</span> <span class="kc">None</span>
+</code></pre></div>
+
+<div class="codehilite"><pre><span></span><code><span class="n">net</span> <span class="o">=</span> <span class="n">net_graphs</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span>
+
+<span class="n">fragmented_net_cell</span> <span class="o">=</span> <span class="n">gdstk</span><span class="o">.</span><span class="n">Cell</span><span class="p">(</span><span class="s2">&quot;net1&quot;</span><span class="p">)</span>
+
+<span class="n">poly_dict</span> <span class="o">=</span> <span class="p">{</span><span class="n">layer</span><span class="p">:</span> 
+  <span class="n">new_cell</span><span class="o">.</span><span class="n">get_polygons</span><span class="p">(</span><span class="n">layer</span><span class="o">=</span><span class="n">layer</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">datatype</span><span class="o">=</span><span class="n">layer</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span> <span class="n">depth</span><span class="o">=-</span><span class="mi">1</span><span class="p">,</span> <span class="n">include_paths</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span> <span class="k">for</span> <span class="n">layer</span> <span class="ow">in</span> <span class="n">layers</span><span class="p">}</span>
+
+<span class="k">for</span> <span class="n">node</span> <span class="ow">in</span> <span class="n">net</span><span class="o">.</span><span class="n">nodes</span><span class="p">:</span>
+  <span class="n">layer</span> <span class="o">=</span> <span class="p">(</span><span class="n">node</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">node</span><span class="p">[</span><span class="mi">1</span><span class="p">])</span>
+  <span class="n">idx</span> <span class="o">=</span> <span class="n">node</span><span class="p">[</span><span class="mi">2</span><span class="p">]</span>
+  <span class="n">layer_props</span> <span class="o">=</span> <span class="n">layers</span><span class="p">[</span><span class="n">layer</span><span class="p">]</span>
+  <span class="n">fragmented_net_cell</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="o">*</span><span class="n">fragment_polygon</span><span class="p">(</span><span class="n">poly_dict</span><span class="p">[</span><span class="n">layer</span><span class="p">][</span><span class="n">idx</span><span class="p">]))</span>
+</code></pre></div>
+
+<p>Use Ueng-Sikorski algorithm to obtain the adjacency graph between polygons of the same layer. This algorithm groups the adjacent polygons by checking which different polygons share the same edge using the Ueng-Sikorski method. 
+This is done by sorting the edge record and chhecking if two adjacent edge records have the same starting and ending node.</p>
+<p>Important note: This algorithm must be adapted to detect intersecting, colinear edges, once intersecting polygons with shared edges of different sizes will not be accounted as neighbours - as they should!</p>
+<div class="codehilite"><pre><span></span><code><span class="kn">from</span> <span class="nn">collections</span> <span class="kn">import</span> <span class="n">defaultdict</span>
+
+<span class="n">poly_dict</span> <span class="o">=</span> <span class="p">{</span><span class="n">layer</span><span class="p">:</span> 
+  <span class="n">fragmented_net_cell</span><span class="o">.</span><span class="n">get_polygons</span><span class="p">(</span><span class="n">layer</span><span class="o">=</span><span class="n">layer</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">datatype</span><span class="o">=</span><span class="n">layer</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span> <span class="n">depth</span><span class="o">=-</span><span class="mi">1</span><span class="p">,</span> <span class="n">include_paths</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span> <span class="k">for</span> <span class="n">layer</span> <span class="ow">in</span> <span class="n">layers</span><span class="p">}</span>
+
+<span class="c1"># Process only metal layers, not via layers.</span>
+<span class="n">metal_layers</span> <span class="o">=</span> <span class="p">[</span><span class="n">layer</span> <span class="k">for</span> <span class="n">layer</span> <span class="ow">in</span> <span class="n">poly_dict</span> <span class="k">if</span> <span class="n">layers</span><span class="p">[</span><span class="n">layer</span><span class="p">][</span><span class="mi">1</span><span class="p">]</span> <span class="ow">not</span> <span class="ow">in</span> <span class="p">[</span><span class="s2">&quot;via&quot;</span><span class="p">,</span> <span class="s2">&quot;label&quot;</span><span class="p">]]</span>
+
+<span class="n">vertex_record</span> <span class="o">=</span> <span class="p">[]</span>
+<span class="k">for</span> <span class="n">layer</span> <span class="ow">in</span> <span class="n">metal_layers</span><span class="p">:</span>
+  <span class="k">for</span> <span class="n">j</span><span class="p">,</span> <span class="n">poly</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">poly_dict</span><span class="p">[</span><span class="n">layer</span><span class="p">]):</span>
+    <span class="n">sorted_vertexes</span> <span class="o">=</span> <span class="p">[</span><span class="nb">tuple</span><span class="p">(</span><span class="n">v</span><span class="p">)</span> <span class="k">for</span> <span class="n">v</span> <span class="ow">in</span> <span class="n">poly</span><span class="o">.</span><span class="n">points</span><span class="p">]</span>
+    <span class="n">sorted_vertexes</span><span class="o">.</span><span class="n">sort</span><span class="p">(</span><span class="n">key</span><span class="o">=</span><span class="k">lambda</span> <span class="n">v</span><span class="p">:</span> <span class="n">v</span><span class="p">[</span><span class="mi">1</span><span class="p">])</span>
+    <span class="n">vertex_record</span><span class="o">.</span><span class="n">extend</span><span class="p">([(</span><span class="n">v</span><span class="p">,</span> <span class="n">j</span><span class="p">,</span> <span class="n">layer</span><span class="p">)</span> <span class="k">for</span> <span class="n">v</span> <span class="ow">in</span> <span class="n">sorted_vertexes</span><span class="p">])</span>
+
+<span class="n">unique_vertexes</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="nb">set</span><span class="p">([(</span><span class="n">v</span><span class="p">,</span> <span class="n">l</span><span class="p">)</span> <span class="k">for</span> <span class="n">v</span><span class="p">,</span> <span class="n">_</span><span class="p">,</span> <span class="n">l</span> <span class="ow">in</span> <span class="n">vertex_record</span><span class="p">]))</span>
+
+<span class="n">edge_record</span> <span class="o">=</span> <span class="p">[]</span>
+<span class="k">for</span> <span class="n">layer</span> <span class="ow">in</span> <span class="n">metal_layers</span><span class="p">:</span>
+  <span class="k">for</span> <span class="n">j</span><span class="p">,</span> <span class="n">poly</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">poly_dict</span><span class="p">[</span><span class="n">layer</span><span class="p">]):</span>
+    <span class="n">indexed_vertexes</span> <span class="o">=</span> <span class="p">[</span><span class="n">unique_vertexes</span><span class="o">.</span><span class="n">index</span><span class="p">((</span><span class="nb">tuple</span><span class="p">(</span><span class="n">v</span><span class="p">),</span><span class="n">layer</span><span class="p">))</span> <span class="k">for</span> <span class="n">v</span> <span class="ow">in</span> <span class="n">poly</span><span class="o">.</span><span class="n">points</span><span class="p">]</span>
+    <span class="n">edges</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="nb">zip</span><span class="p">(</span><span class="n">indexed_vertexes</span><span class="p">[:</span><span class="o">-</span><span class="mi">1</span><span class="p">],</span> <span class="n">indexed_vertexes</span><span class="p">[</span><span class="mi">1</span><span class="p">:]))</span> <span class="o">+</span> <span class="p">[(</span><span class="n">indexed_vertexes</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">],</span><span class="n">indexed_vertexes</span><span class="p">[</span><span class="mi">0</span><span class="p">])]</span>
+    <span class="c1"># sort all edges uppon recording them</span>
+    <span class="n">edge_record</span><span class="o">.</span><span class="n">extend</span><span class="p">([((</span><span class="nb">max</span><span class="p">(</span><span class="n">e</span><span class="p">),</span> <span class="nb">min</span><span class="p">(</span><span class="n">e</span><span class="p">)),</span> <span class="n">j</span><span class="p">,</span> <span class="n">layer</span><span class="p">)</span> <span class="k">for</span> <span class="n">e</span> <span class="ow">in</span> <span class="n">edges</span><span class="p">])</span>
+
+
+<span class="c1"># go through the edges and establish a connection between polygons </span>
+<span class="c1"># that share an edge. Other implementations allow polygons to share a single </span>
+<span class="c1"># vertex, but this introduces an higher error in resistance computations using </span>
+<span class="c1"># square counting.</span>
+<span class="n">net_adjacency_graph</span> <span class="o">=</span> <span class="n">nx</span><span class="o">.</span><span class="n">Graph</span><span class="p">()</span>
+<span class="n">adjacency_dict</span> <span class="o">=</span> <span class="n">defaultdict</span><span class="p">(</span><span class="nb">list</span><span class="p">)</span>
+<span class="k">for</span> <span class="n">edge</span><span class="p">,</span> <span class="n">polygon_id</span><span class="p">,</span> <span class="n">layer</span> <span class="ow">in</span> <span class="n">edge_record</span><span class="p">:</span>
+  <span class="n">adjacency_dict</span><span class="p">[(</span><span class="n">edge</span><span class="p">,</span> <span class="n">layer</span><span class="p">)]</span><span class="o">.</span><span class="n">append</span><span class="p">((</span><span class="n">polygon_id</span><span class="p">,</span> <span class="n">layer</span><span class="p">))</span>
+
+<span class="c1"># add intersecting polygons that have different size edges ... </span>
+<span class="c1"># colinearity and intersecting edges are not being verified....</span>
+<span class="c1"># this is slower but easier for now</span>
+<span class="k">for</span> <span class="n">layer</span> <span class="ow">in</span> <span class="n">metal_layers</span><span class="p">:</span>
+  <span class="n">cons</span> <span class="o">=</span> <span class="p">[</span>
+    <span class="n">net_adjacency_graph</span><span class="o">.</span><span class="n">add_edge</span><span class="p">(</span><span class="o">*</span><span class="p">((</span><span class="n">poly_id</span><span class="p">,</span> <span class="n">layer</span><span class="p">),</span> <span class="p">(</span><span class="n">other_poly_id</span><span class="p">,</span> <span class="n">layer</span><span class="p">)))</span>
+    <span class="k">for</span> <span class="n">poly_id</span><span class="p">,</span> <span class="n">poly</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">poly_dict</span><span class="p">[</span><span class="n">layer</span><span class="p">])</span>
+    <span class="k">for</span> <span class="n">other_poly_id</span><span class="p">,</span> <span class="n">other_poly</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">poly_dict</span><span class="p">[</span><span class="n">layer</span><span class="p">])</span>
+    <span class="k">if</span> <span class="n">check_neighbour_polygons</span><span class="p">(</span><span class="n">poly</span><span class="p">,</span> <span class="n">other_poly</span><span class="p">)</span> <span class="ow">or</span> <span class="n">intersects</span><span class="p">(</span><span class="n">poly</span><span class="p">,</span> <span class="n">other_poly</span><span class="p">)</span>
+  <span class="p">]</span>
+
+<span class="c1"># remove self loops and duplicate edges</span>
+<span class="n">net_adjacency_graph</span><span class="o">.</span><span class="n">remove_edges_from</span><span class="p">(</span><span class="nb">list</span><span class="p">(</span><span class="n">nx</span><span class="o">.</span><span class="n">selfloop_edges</span><span class="p">(</span><span class="n">net_adjacency_graph</span><span class="p">)))</span>
+
+<span class="c1"># record only edges that are shared by at least 2 unique polygons</span>
+<span class="n">adjacency_dict</span> <span class="o">=</span> <span class="p">{</span><span class="n">k</span><span class="p">:</span> <span class="n">v</span> <span class="k">for</span> <span class="n">k</span><span class="p">,</span> <span class="n">v</span> <span class="ow">in</span> <span class="n">adjacency_dict</span><span class="o">.</span><span class="n">items</span><span class="p">()</span> <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="nb">list</span><span class="p">(</span><span class="nb">set</span><span class="p">(</span><span class="n">v</span><span class="p">)))</span> <span class="o">&gt;</span> <span class="mi">1</span><span class="p">}</span>
+
+<span class="k">for</span> <span class="n">unique_edge</span><span class="p">,</span> <span class="n">unique_polygons</span> <span class="ow">in</span> <span class="n">adjacency_dict</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+  <span class="n">neighbour_polygons</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="nb">zip</span><span class="p">(</span><span class="n">unique_polygons</span><span class="p">,</span> <span class="n">unique_polygons</span><span class="p">[</span><span class="mi">1</span><span class="p">:]))</span>
+  <span class="p">[</span><span class="n">net_adjacency_graph</span><span class="o">.</span><span class="n">add_edge</span><span class="p">(</span><span class="o">*</span><span class="n">edge</span><span class="p">)</span> <span class="k">for</span> <span class="n">edge</span> <span class="ow">in</span> <span class="n">neighbour_polygons</span><span class="p">]</span>
+</code></pre></div>
+
+<div class="codehilite"><pre><span></span><code><span class="k">assert</span> <span class="n">adjacency_dict</span> <span class="o">!=</span> <span class="p">{},</span> <span class="s2">&quot;Empty adjacency record&quot;</span>
+</code></pre></div>
+
+<div class="codehilite"><pre><span></span><code><span class="nb">len</span><span class="p">(</span><span class="n">net_adjacency_graph</span><span class="o">.</span><span class="n">edges</span><span class="p">),</span> <span class="n">nx</span><span class="o">.</span><span class="n">draw</span><span class="p">(</span><span class="n">net_adjacency_graph</span><span class="p">)</span>
+</code></pre></div>
+
+<div class="codehilite"><pre><span></span><code>(342, None)
+</code></pre></div>
+
+<p><img alt="png" src="../3D_signoff_IR_files/3D_signoff_IR_21_1.png" /></p>
+<p>Finally, add the conections between vias and the adjacent polygons in the top and bottom layers (from the top layer to via, and from via to bottom layer)</p>
+<div class="codehilite"><pre><span></span><code><span class="n">via_layers</span> <span class="o">=</span> <span class="p">[</span><span class="n">layer</span> <span class="k">for</span> <span class="n">layer</span> <span class="ow">in</span> <span class="n">poly_dict</span> <span class="k">if</span> <span class="n">layers</span><span class="p">[</span><span class="n">layer</span><span class="p">][</span><span class="mi">1</span><span class="p">]</span> <span class="ow">not</span> <span class="ow">in</span> <span class="p">[</span><span class="s2">&quot;drawing&quot;</span><span class="p">,</span> <span class="s2">&quot;label&quot;</span><span class="p">]]</span>
+
+<span class="k">for</span> <span class="n">layer</span> <span class="ow">in</span> <span class="n">tqdm</span><span class="p">(</span><span class="n">via_layers</span><span class="p">):</span>
+  <span class="n">layer_name</span> <span class="o">=</span> <span class="n">layers</span><span class="p">[</span><span class="n">layer</span><span class="p">][</span><span class="mi">0</span><span class="p">]</span>
+  <span class="n">bot_layer_name</span> <span class="o">=</span> <span class="p">[</span><span class="n">key</span> <span class="k">for</span> <span class="n">key</span> <span class="ow">in</span> <span class="n">connect_map</span> <span class="k">if</span> <span class="n">connect_map</span><span class="p">[</span><span class="n">key</span><span class="p">]</span> <span class="o">==</span> <span class="n">layer_name</span><span class="p">][</span><span class="mi">0</span><span class="p">]</span>
+  <span class="n">top_layer_name</span> <span class="o">=</span> <span class="n">connect_map</span><span class="p">[</span><span class="n">layer_name</span><span class="p">]</span>
+  <span class="n">bot_layer</span> <span class="o">=</span> <span class="n">get_layer_by_name</span><span class="p">(</span><span class="n">layers</span><span class="p">,</span> <span class="n">bot_layer_name</span><span class="p">)</span>
+  <span class="n">top_layer</span> <span class="o">=</span> <span class="n">get_layer_by_name</span><span class="p">(</span><span class="n">layers</span><span class="p">,</span> <span class="n">top_layer_name</span><span class="p">)</span>
+  <span class="n">polygons_to_check</span> <span class="o">=</span> <span class="p">[(</span><span class="n">poly</span><span class="p">,</span> <span class="n">poly_id</span><span class="p">,</span> <span class="n">bot_layer</span><span class="p">)</span> <span class="k">for</span> <span class="n">poly_id</span><span class="p">,</span> <span class="n">poly</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">poly_dict</span><span class="p">[</span><span class="n">bot_layer</span><span class="p">])]</span>
+  <span class="n">polygons_to_check</span> <span class="o">=</span> <span class="n">chain</span><span class="p">(</span><span class="n">polygons_to_check</span><span class="p">,</span> <span class="p">[(</span><span class="n">poly</span><span class="p">,</span> <span class="n">poly_id</span><span class="p">,</span> <span class="n">top_layer</span><span class="p">)</span> <span class="k">for</span> <span class="n">poly_id</span><span class="p">,</span> <span class="n">poly</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">poly_dict</span><span class="p">[</span><span class="n">top_layer</span><span class="p">])])</span>
+
+  <span class="n">edges</span> <span class="o">=</span> <span class="p">[</span>
+    <span class="p">((</span><span class="n">via_id</span><span class="p">,</span> <span class="n">layer</span><span class="p">),</span> <span class="p">(</span><span class="n">poly_id</span><span class="p">,</span> <span class="n">poly_layer</span><span class="p">))</span> 
+    <span class="k">for</span> <span class="n">poly</span><span class="p">,</span> <span class="n">poly_id</span><span class="p">,</span> <span class="n">poly_layer</span> <span class="ow">in</span> <span class="n">polygons_to_check</span>
+    <span class="k">for</span> <span class="n">via_id</span><span class="p">,</span> <span class="n">via</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">poly_dict</span><span class="p">[</span><span class="n">layer</span><span class="p">])</span>
+    <span class="k">if</span> <span class="n">intersects</span><span class="p">(</span><span class="n">poly</span><span class="p">,</span> <span class="n">via</span><span class="p">)</span>
+  <span class="p">]</span>
+  <span class="nb">print</span><span class="p">(</span><span class="n">edges</span><span class="p">)</span>
+  <span class="n">edges</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="nb">set</span><span class="p">(</span><span class="n">edges</span><span class="p">))</span>
+  <span class="p">[</span><span class="n">net_adjacency_graph</span><span class="o">.</span><span class="n">add_edge</span><span class="p">(</span><span class="o">*</span><span class="n">edge</span><span class="p">)</span> <span class="k">for</span> <span class="n">edge</span> <span class="ow">in</span> <span class="n">edges</span><span class="p">]</span>
+</code></pre></div>
+
+<div class="codehilite"><pre><span></span><code><span class="n">net_adjacency_graph</span><span class="o">.</span><span class="n">edges</span><span class="p">,</span> <span class="n">nx</span><span class="o">.</span><span class="n">draw</span><span class="p">(</span><span class="n">net_adjacency_graph</span><span class="p">),</span> <span class="n">nx</span><span class="o">.</span><span class="n">is_connected</span><span class="p">(</span><span class="n">net_adjacency_graph</span><span class="p">)</span>
+</code></pre></div>
+
+<p><img alt="png" src="../3D_signoff_IR_files/3D_signoff_IR_24_1.png" /></p>
+<div class="codehilite"><pre><span></span><code><span class="nb">len</span><span class="p">(</span><span class="n">net_adjacency_graph</span><span class="o">.</span><span class="n">edges</span><span class="p">)</span>
+</code></pre></div>
+
+<div class="codehilite"><pre><span></span><code><span class="mf">438</span><span class="w"></span>
+</code></pre></div>
+
+<p>Next, declare an arbitrary input pad of the traced net. In this case, we are just going to use a random polygon. Then, we redirect all edges of the adjacency graph to span out from the input pad polygon. This operation can be done with a BFS Tree representation of the graph, which preserves self-loops containing parallel resistors, but redirects all edges in the loop to an output (/s) node.</p>
+<p>Populate graph with sheet resistance information per layer</p>
+<div class="codehilite"><pre><span></span><code><span class="n">technology_resistance</span> <span class="o">=</span> <span class="p">{</span>
+  <span class="s2">&quot;met1&quot;</span><span class="p">:</span> <span class="mf">1e-3</span><span class="p">,</span> <span class="c1"># sheet resistance per square</span>
+  <span class="s2">&quot;via&quot;</span><span class="p">:</span> <span class="mf">0.2</span><span class="p">,</span> <span class="c1"># resistance of a single via</span>
+  <span class="s2">&quot;met2&quot;</span><span class="p">:</span> <span class="mf">1e-3</span><span class="p">,</span>
+  <span class="s2">&quot;via2&quot;</span><span class="p">:</span> <span class="mf">0.2</span><span class="p">,</span>
+  <span class="s2">&quot;met3&quot;</span><span class="p">:</span> <span class="mf">1e-3</span><span class="p">,</span>
+  <span class="s2">&quot;via3&quot;</span><span class="p">:</span> <span class="mf">0.2</span><span class="p">,</span>
+  <span class="s2">&quot;met4&quot;</span><span class="p">:</span> <span class="mf">1e-4</span><span class="p">,</span>
+  <span class="s2">&quot;via4&quot;</span><span class="p">:</span> <span class="mf">0.1</span><span class="p">,</span>
+  <span class="s2">&quot;met5&quot;</span><span class="p">:</span> <span class="mf">1e-4</span>
+<span class="p">}</span>
+</code></pre></div>
+
+<p>Using the Moore-Penrose Pseudo inverse, compute the resistance distance between the input pad to all the remaining nodes of the target net to observe IR drop.</p>
+<div class="codehilite"><pre><span></span><code><span class="nd">@nx</span><span class="o">.</span><span class="n">utils</span><span class="o">.</span><span class="n">not_implemented_for</span><span class="p">(</span><span class="s2">&quot;directed&quot;</span><span class="p">)</span>
+<span class="k">def</span> <span class="nf">resistance_distance</span><span class="p">(</span><span class="n">G</span><span class="p">,</span> <span class="n">nodeA</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">nodeB</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">weight</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">invert_weight</span><span class="o">=</span><span class="kc">True</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Returns the resistance distance between every pair of nodes on graph G.</span>
+
+<span class="sd">    The resistance distance between two nodes of a graph is akin to treating</span>
+<span class="sd">    the graph as a grid of resistors with a resistance equal to the provided</span>
+<span class="sd">    weight [1]_, [2]_.</span>
+
+<span class="sd">    If weight is not provided, then a weight of 1 is used for all edges.</span>
+
+<span class="sd">    If two nodes are the same, the resistance distance is zero.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    G : NetworkX graph</span>
+<span class="sd">       A graph</span>
+
+<span class="sd">    nodeA : node or None, optional (default=None)</span>
+<span class="sd">      A node within graph G.</span>
+<span class="sd">      If None, compute resistance distance using all nodes as source nodes.</span>
+
+<span class="sd">    nodeB : node or None, optional (default=None)</span>
+<span class="sd">      A node within graph G.</span>
+<span class="sd">      If None, compute resistance distance using all nodes as target nodes.</span>
+
+<span class="sd">    weight : string or None, optional (default=None)</span>
+<span class="sd">       The edge data key used to compute the resistance distance.</span>
+<span class="sd">       If None, then each edge has weight 1.</span>
+
+<span class="sd">    invert_weight : boolean (default=True)</span>
+<span class="sd">        Proper calculation of resistance distance requires building the</span>
+<span class="sd">        Laplacian matrix with the reciprocal of the weight. Not required</span>
+<span class="sd">        if the weight is already inverted. Weight cannot be zero.</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    rd : dict or float</span>
+<span class="sd">       If `nodeA` and `nodeB` are given, resistance distance between `nodeA`</span>
+<span class="sd">       and `nodeB`. If `nodeA` or `nodeB` is unspecified (the default), a</span>
+<span class="sd">       dictionary of nodes with resistance distances as the value.</span>
+
+<span class="sd">    Raises</span>
+<span class="sd">    ------</span>
+<span class="sd">    NetworkXNotImplemented</span>
+<span class="sd">        If `G` is a directed graph.</span>
+
+<span class="sd">    NetworkXError</span>
+<span class="sd">        If `G` is not connected, or contains no nodes,</span>
+<span class="sd">        or `nodeA` is not in `G` or `nodeB` is not in `G`.</span>
+
+<span class="sd">    Examples</span>
+<span class="sd">    --------</span>
+<span class="sd">    &gt;&gt;&gt; G = nx.Graph([(1, 2), (1, 3), (1, 4), (3, 4), (3, 5), (4, 5)])</span>
+<span class="sd">    &gt;&gt;&gt; round(nx.resistance_distance(G, 1, 3), 10)</span>
+<span class="sd">    0.625</span>
+
+<span class="sd">    Notes</span>
+<span class="sd">    -----</span>
+<span class="sd">    The implementation is based on Theorem A in [2]_. Self-loops are ignored.</span>
+<span class="sd">    Multi-edges are contracted in one edge with weight equal to the harmonic sum of the weights.</span>
+
+<span class="sd">    References</span>
+<span class="sd">    ----------</span>
+<span class="sd">    .. [1] Wikipedia</span>
+<span class="sd">       &quot;Resistance distance.&quot;</span>
+<span class="sd">       https://en.wikipedia.org/wiki/Resistance_distance</span>
+<span class="sd">    .. [2] D. J. Klein and M. Randic.</span>
+<span class="sd">        Resistance distance.</span>
+<span class="sd">        J. of Math. Chem. 12:81-95, 1993.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
+
+    <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">G</span><span class="p">)</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="n">nx</span><span class="o">.</span><span class="n">NetworkXError</span><span class="p">(</span><span class="s2">&quot;Graph G must contain at least one node.&quot;</span><span class="p">)</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">nx</span><span class="o">.</span><span class="n">is_connected</span><span class="p">(</span><span class="n">G</span><span class="p">):</span>
+        <span class="k">raise</span> <span class="n">nx</span><span class="o">.</span><span class="n">NetworkXError</span><span class="p">(</span><span class="s2">&quot;Graph G must be strongly connected.&quot;</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">nodeA</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="ow">and</span> <span class="n">nodeA</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">G</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="n">nx</span><span class="o">.</span><span class="n">NetworkXError</span><span class="p">(</span><span class="s2">&quot;Node A is not in graph G.&quot;</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">nodeB</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="ow">and</span> <span class="n">nodeB</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">G</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="n">nx</span><span class="o">.</span><span class="n">NetworkXError</span><span class="p">(</span><span class="s2">&quot;Node B is not in graph G.&quot;</span><span class="p">)</span>
+
+    <span class="n">G</span> <span class="o">=</span> <span class="n">G</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
+    <span class="n">node_list</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="n">G</span><span class="p">)</span>
+
+    <span class="c1"># Invert weights</span>
+    <span class="k">if</span> <span class="n">invert_weight</span> <span class="ow">and</span> <span class="n">weight</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="k">if</span> <span class="n">G</span><span class="o">.</span><span class="n">is_multigraph</span><span class="p">():</span>
+            <span class="k">for</span> <span class="n">u</span><span class="p">,</span> <span class="n">v</span><span class="p">,</span> <span class="n">k</span><span class="p">,</span> <span class="n">d</span> <span class="ow">in</span> <span class="n">G</span><span class="o">.</span><span class="n">edges</span><span class="p">(</span><span class="n">keys</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">data</span><span class="o">=</span><span class="kc">True</span><span class="p">):</span>
+                <span class="n">d</span><span class="p">[</span><span class="n">weight</span><span class="p">]</span> <span class="o">=</span> <span class="mi">1</span> <span class="o">/</span> <span class="n">d</span><span class="p">[</span><span class="n">weight</span><span class="p">]</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">for</span> <span class="n">u</span><span class="p">,</span> <span class="n">v</span><span class="p">,</span> <span class="n">d</span> <span class="ow">in</span> <span class="n">G</span><span class="o">.</span><span class="n">edges</span><span class="p">(</span><span class="n">data</span><span class="o">=</span><span class="kc">True</span><span class="p">):</span>
+                <span class="n">d</span><span class="p">[</span><span class="n">weight</span><span class="p">]</span> <span class="o">=</span> <span class="mi">1</span> <span class="o">/</span> <span class="n">d</span><span class="p">[</span><span class="n">weight</span><span class="p">]</span>
+
+    <span class="c1"># Compute resistance distance using the Moore Penrose Pseudo-inverse </span>
+    <span class="c1"># of the Laplacian of the Graph</span>
+    <span class="c1"># Self-loops are ignored</span>
+    <span class="n">L</span> <span class="o">=</span> <span class="n">nx</span><span class="o">.</span><span class="n">laplacian_matrix</span><span class="p">(</span><span class="n">G</span><span class="p">,</span> <span class="n">weight</span><span class="o">=</span><span class="n">weight</span><span class="p">)</span><span class="o">.</span><span class="n">todense</span><span class="p">()</span>
+    <span class="n">Linv</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">linalg</span><span class="o">.</span><span class="n">pinv</span><span class="p">(</span><span class="n">L</span><span class="p">,</span> <span class="n">hermitian</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+
+    <span class="c1"># Return relevant distances</span>
+    <span class="k">if</span> <span class="n">nodeA</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="ow">and</span> <span class="n">nodeB</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="n">i</span> <span class="o">=</span> <span class="n">node_list</span><span class="o">.</span><span class="n">index</span><span class="p">(</span><span class="n">nodeA</span><span class="p">)</span>
+        <span class="n">j</span> <span class="o">=</span> <span class="n">node_list</span><span class="o">.</span><span class="n">index</span><span class="p">(</span><span class="n">nodeB</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">Linv</span><span class="p">[</span><span class="n">i</span><span class="p">,</span> <span class="n">i</span><span class="p">]</span> <span class="o">+</span> <span class="n">Linv</span><span class="p">[</span><span class="n">j</span><span class="p">,</span> <span class="n">j</span><span class="p">]</span> <span class="o">-</span> <span class="n">Linv</span><span class="p">[</span><span class="n">i</span><span class="p">,</span> <span class="n">j</span><span class="p">]</span> <span class="o">-</span> <span class="n">Linv</span><span class="p">[</span><span class="n">j</span><span class="p">,</span> <span class="n">i</span><span class="p">]</span>
+
+    <span class="k">elif</span> <span class="n">nodeA</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="n">i</span> <span class="o">=</span> <span class="n">node_list</span><span class="o">.</span><span class="n">index</span><span class="p">(</span><span class="n">nodeA</span><span class="p">)</span>
+        <span class="n">d</span> <span class="o">=</span> <span class="p">{}</span>
+        <span class="k">for</span> <span class="n">n</span> <span class="ow">in</span> <span class="n">G</span><span class="p">:</span>
+            <span class="n">j</span> <span class="o">=</span> <span class="n">node_list</span><span class="o">.</span><span class="n">index</span><span class="p">(</span><span class="n">n</span><span class="p">)</span>
+            <span class="n">d</span><span class="p">[</span><span class="n">n</span><span class="p">]</span> <span class="o">=</span> <span class="n">Linv</span><span class="p">[</span><span class="n">i</span><span class="p">,</span> <span class="n">i</span><span class="p">]</span> <span class="o">+</span> <span class="n">Linv</span><span class="p">[</span><span class="n">j</span><span class="p">,</span> <span class="n">j</span><span class="p">]</span> <span class="o">-</span> <span class="n">Linv</span><span class="p">[</span><span class="n">i</span><span class="p">,</span> <span class="n">j</span><span class="p">]</span> <span class="o">-</span> <span class="n">Linv</span><span class="p">[</span><span class="n">j</span><span class="p">,</span> <span class="n">i</span><span class="p">]</span>
+        <span class="k">return</span> <span class="n">d</span>
+
+    <span class="k">elif</span> <span class="n">nodeB</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="n">j</span> <span class="o">=</span> <span class="n">node_list</span><span class="o">.</span><span class="n">index</span><span class="p">(</span><span class="n">nodeB</span><span class="p">)</span>
+        <span class="n">d</span> <span class="o">=</span> <span class="p">{}</span>
+        <span class="k">for</span> <span class="n">n</span> <span class="ow">in</span> <span class="n">G</span><span class="p">:</span>
+            <span class="n">i</span> <span class="o">=</span> <span class="n">node_list</span><span class="o">.</span><span class="n">index</span><span class="p">(</span><span class="n">n</span><span class="p">)</span>
+            <span class="n">d</span><span class="p">[</span><span class="n">n</span><span class="p">]</span> <span class="o">=</span> <span class="n">Linv</span><span class="p">[</span><span class="n">i</span><span class="p">,</span> <span class="n">i</span><span class="p">]</span> <span class="o">+</span> <span class="n">Linv</span><span class="p">[</span><span class="n">j</span><span class="p">,</span> <span class="n">j</span><span class="p">]</span> <span class="o">-</span> <span class="n">Linv</span><span class="p">[</span><span class="n">i</span><span class="p">,</span> <span class="n">j</span><span class="p">]</span> <span class="o">-</span> <span class="n">Linv</span><span class="p">[</span><span class="n">j</span><span class="p">,</span> <span class="n">i</span><span class="p">]</span>
+        <span class="k">return</span> <span class="n">d</span>
+
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">d</span> <span class="o">=</span> <span class="p">{}</span>
+        <span class="k">for</span> <span class="n">n</span> <span class="ow">in</span> <span class="n">G</span><span class="p">:</span>
+            <span class="n">i</span> <span class="o">=</span> <span class="n">node_list</span><span class="o">.</span><span class="n">index</span><span class="p">(</span><span class="n">n</span><span class="p">)</span>
+            <span class="n">d</span><span class="p">[</span><span class="n">n</span><span class="p">]</span> <span class="o">=</span> <span class="p">{}</span>
+            <span class="k">for</span> <span class="n">n2</span> <span class="ow">in</span> <span class="n">G</span><span class="p">:</span>
+                <span class="n">j</span> <span class="o">=</span> <span class="n">node_list</span><span class="o">.</span><span class="n">index</span><span class="p">(</span><span class="n">n2</span><span class="p">)</span>
+                <span class="n">d</span><span class="p">[</span><span class="n">n</span><span class="p">][</span><span class="n">n2</span><span class="p">]</span> <span class="o">=</span> <span class="n">Linv</span><span class="p">[</span><span class="n">i</span><span class="p">,</span> <span class="n">i</span><span class="p">]</span> <span class="o">+</span> <span class="n">Linv</span><span class="p">[</span><span class="n">j</span><span class="p">,</span> <span class="n">j</span><span class="p">]</span> <span class="o">-</span> <span class="n">Linv</span><span class="p">[</span><span class="n">i</span><span class="p">,</span> <span class="n">j</span><span class="p">]</span> <span class="o">-</span> <span class="n">Linv</span><span class="p">[</span><span class="n">j</span><span class="p">,</span> <span class="n">i</span><span class="p">]</span>
+        <span class="k">return</span> <span class="n">d</span>
+</code></pre></div>
+
+<div class="codehilite"><pre><span></span><code><span class="n">net_adjacency_graph</span><span class="o">.</span><span class="n">nodes</span>
+</code></pre></div>
+
+<div class="codehilite"><pre><span></span><code>NodeView(((0, (2, 0)), (1, (2, 0)), (24, (2, 0)), (2, (2, 0)), (18, (2, 0)), (3, (2, 0)), (4, (2, 0)), (17, (2, 0)), (5, (2, 0)), (6, (2, 0)), (7, (2, 0)), (19, (2, 0)), (8, (2, 0)), (9, (2, 0)), (10, (2, 0)), (20, (2, 0)), (11, (2, 0)), (12, (2, 0)), (13, (2, 0)), (21, (2, 0)), (14, (2, 0)), (15, (2, 0)), (16, (2, 0)), (22, (2, 0)), (23, (2, 0)), (25, (2, 0)), (26, (2, 0)), (49, (2, 0)), (27, (2, 0)), (43, (2, 0)), (28, (2, 0)), (29, (2, 0)), (42, (2, 0)), (30, (2, 0)), (31, (2, 0)), (32, (2, 0)), (44, (2, 0)), (33, (2, 0)), (34, (2, 0)), (35, (2, 0)), (45, (2, 0)), (36, (2, 0)), (37, (2, 0)), (38, (2, 0)), (46, (2, 0)), (39, (2, 0)), (40, (2, 0)), (41, (2, 0)), (47, (2, 0)), (48, (2, 0)), (50, (2, 0)), (51, (2, 0)), (74, (2, 0)), (52, (2, 0)), (68, (2, 0)), (53, (2, 0)), (54, (2, 0)), (67, (2, 0)), (55, (2, 0)), (56, (2, 0)), (57, (2, 0)), (69, (2, 0)), (58, (2, 0)), (59, (2, 0)), (60, (2, 0)), (70, (2, 0)), (61, (2, 0)), (62, (2, 0)), (63, (2, 0)), (71, (2, 0)), (64, (2, 0)), (65, (2, 0)), (66, (2, 0)), (72, (2, 0)), (73, (2, 0)), (75, (2, 0)), (76, (2, 0)), (99, (2, 0)), (77, (2, 0)), (93, (2, 0)), (78, (2, 0)), (79, (2, 0)), (92, (2, 0)), (80, (2, 0)), (81, (2, 0)), (82, (2, 0)), (94, (2, 0)), (83, (2, 0)), (84, (2, 0)), (85, (2, 0)), (95, (2, 0)), (86, (2, 0)), (87, (2, 0)), (88, (2, 0)), (96, (2, 0)), (89, (2, 0)), (90, (2, 0)), (91, (2, 0)), (97, (2, 0)), (98, (2, 0)), (100, (2, 0)), (101, (2, 0)), (124, (2, 0)), (102, (2, 0)), (118, (2, 0)), (103, (2, 0)), (104, (2, 0)), (117, (2, 0)), (105, (2, 0)), (106, (2, 0)), (107, (2, 0)), (119, (2, 0)), (108, (2, 0)), (109, (2, 0)), (110, (2, 0)), (120, (2, 0)), (111, (2, 0)), (112, (2, 0)), (113, (2, 0)), (121, (2, 0)), (114, (2, 0)), (115, (2, 0)), (116, (2, 0)), (122, (2, 0)), (123, (2, 0)), (125, (2, 0)), (126, (2, 0)), (149, (2, 0)), (127, (2, 0)), (143, (2, 0)), (128, (2, 0)), (129, (2, 0)), (142, (2, 0)), (130, (2, 0)), (131, (2, 0)), (132, (2, 0)), (144, (2, 0)), (133, (2, 0)), (134, (2, 0)), (135, (2, 0)), (145, (2, 0)), (136, (2, 0)), (137, (2, 0)), (138, (2, 0)), (146, (2, 0)), (139, (2, 0)), (140, (2, 0)), (141, (2, 0)), (147, (2, 0)), (148, (2, 0)), (150, (2, 0)), (151, (2, 0)), (174, (2, 0)), (152, (2, 0)), (168, (2, 0)), (153, (2, 0)), (154, (2, 0)), (167, (2, 0)), (155, (2, 0)), (156, (2, 0)), (157, (2, 0)), (169, (2, 0)), (158, (2, 0)), (159, (2, 0)), (160, (2, 0)), (170, (2, 0)), (161, (2, 0)), (162, (2, 0)), (163, (2, 0)), (171, (2, 0)), (164, (2, 0)), (165, (2, 0)), (166, (2, 0)), (172, (2, 0)), (173, (2, 0)), (175, (2, 0)), (176, (2, 0)), (199, (2, 0)), (177, (2, 0)), (193, (2, 0)), (178, (2, 0)), (179, (2, 0)), (192, (2, 0)), (180, (2, 0)), (181, (2, 0)), (182, (2, 0)), (194, (2, 0)), (183, (2, 0)), (184, (2, 0)), (185, (2, 0)), (195, (2, 0)), (186, (2, 0)), (187, (2, 0)), (188, (2, 0)), (196, (2, 0)), (189, (2, 0)), (190, (2, 0)), (191, (2, 0)), (197, (2, 0)), (198, (2, 0)), (0, (3, 0)), (1, (3, 0)), (24, (3, 0)), (17, (3, 0)), (2, (3, 0)), (3, (3, 0)), (16, (3, 0)), (4, (3, 0)), (5, (3, 0)), (18, (3, 0)), (6, (3, 0)), (7, (3, 0)), (19, (3, 0)), (8, (3, 0)), (9, (3, 0)), (20, (3, 0)), (10, (3, 0)), (11, (3, 0)), (21, (3, 0)), (12, (3, 0)), (13, (3, 0)), (22, (3, 0)), (14, (3, 0)), (15, (3, 0)), (23, (3, 0)), (25, (3, 0)), (26, (3, 0)), (49, (3, 0)), (42, (3, 0)), (27, (3, 0)), (28, (3, 0)), (41, (3, 0)), (29, (3, 0)), (30, (3, 0)), (43, (3, 0)), (31, (3, 0)), (32, (3, 0)), (44, (3, 0)), (33, (3, 0)), (34, (3, 0)), (45, (3, 0)), (35, (3, 0)), (36, (3, 0)), (46, (3, 0)), (37, (3, 0)), (38, (3, 0)), (47, (3, 0)), (39, (3, 0)), (40, (3, 0)), (48, (3, 0)), (50, (3, 0)), (51, (3, 0)), (74, (3, 0)), (67, (3, 0)), (52, (3, 0)), (53, (3, 0)), (66, (3, 0)), (54, (3, 0)), (55, (3, 0)), (68, (3, 0)), (56, (3, 0)), (57, (3, 0)), (69, (3, 0)), (58, (3, 0)), (59, (3, 0)), (70, (3, 0)), (60, (3, 0)), (61, (3, 0)), (71, (3, 0)), (62, (3, 0)), (63, (3, 0)), (72, (3, 0)), (64, (3, 0)), (65, (3, 0)), (73, (3, 0)), (75, (3, 0)), (76, (3, 0)), (99, (3, 0)), (92, (3, 0)), (77, (3, 0)), (78, (3, 0)), (91, (3, 0)), (79, (3, 0)), (80, (3, 0)), (93, (3, 0)), (81, (3, 0)), (82, (3, 0)), (94, (3, 0)), (83, (3, 0)), (84, (3, 0)), (95, (3, 0)), (85, (3, 0)), (86, (3, 0)), (96, (3, 0)), (87, (3, 0)), (88, (3, 0)), (97, (3, 0)), (89, (3, 0)), (90, (3, 0)), (98, (3, 0)), (100, (3, 0)), (101, (3, 0)), (124, (3, 0)), (117, (3, 0)), (102, (3, 0)), (103, (3, 0)), (116, (3, 0)), (104, (3, 0)), (105, (3, 0)), (118, (3, 0)), (106, (3, 0)), (107, (3, 0)), (119, (3, 0)), (108, (3, 0)), (109, (3, 0)), (120, (3, 0)), (110, (3, 0)), (111, (3, 0)), (121, (3, 0)), (112, (3, 0)), (113, (3, 0)), (122, (3, 0)), (114, (3, 0)), (115, (3, 0)), (123, (3, 0)), (125, (3, 0)), (126, (3, 0)), (149, (3, 0)), (142, (3, 0)), (127, (3, 0)), (128, (3, 0)), (141, (3, 0)), (129, (3, 0)), (130, (3, 0)), (143, (3, 0)), (131, (3, 0)), (132, (3, 0)), (144, (3, 0)), (133, (3, 0)), (134, (3, 0)), (145, (3, 0)), (135, (3, 0)), (136, (3, 0)), (146, (3, 0)), (137, (3, 0)), (138, (3, 0)), (147, (3, 0)), (139, (3, 0)), (140, (3, 0)), (148, (3, 0)), (2, (2, 1)), (43, (2, 1)), (19, (2, 1)), (12, (2, 1)), (33, (2, 1)), (16, (2, 1)), (30, (2, 1)), (40, (2, 1)), (1, (2, 1)), (38, (2, 1)), (9, (2, 1)), (34, (2, 1)), (37, (2, 1)), (29, (2, 1)), (7, (2, 1)), (27, (2, 1)), (26, (2, 1)), (4, (2, 1)), (6, (2, 1)), (3, (2, 1)), (32, (2, 1)), (22, (2, 1)), (17, (2, 1)), (47, (2, 1)), (18, (2, 1)), (11, (2, 1)), (31, (2, 1)), (42, (2, 1)), (14, (2, 1)), (0, (2, 1)), (46, (2, 1)), (35, (2, 1)), (8, (2, 1)), (28, (2, 1)), (39, (2, 1)), (44, (2, 1)), (21, (2, 1)), (36, (2, 1)), (41, (2, 1)), (15, (2, 1)), (13, (2, 1)), (10, (2, 1)), (20, (2, 1)), (25, (2, 1)), (45, (2, 1)), (5, (2, 1)), (24, (2, 1)), (23, (2, 1))))
+</code></pre></div>
+
+<div class="codehilite"><pre><span></span><code><span class="n">source</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="n">net_adjacency_graph</span><span class="o">.</span><span class="n">nodes</span><span class="p">)[</span><span class="mi">11</span><span class="p">]</span>
+<span class="n">max_nodes</span> <span class="o">=</span> <span class="mi">1000000</span>
+<span class="n">net_adj_tree_graph</span><span class="p">:</span> <span class="n">nx</span><span class="o">.</span><span class="n">DiGraph</span> <span class="o">=</span> <span class="n">nx</span><span class="o">.</span><span class="n">bfs_tree</span><span class="p">(</span>
+        <span class="n">net_adjacency_graph</span><span class="p">,</span> 
+        <span class="n">source</span><span class="p">,</span> 
+        <span class="n">depth_limit</span><span class="o">=</span><span class="n">max_nodes</span>
+    <span class="p">)</span>
+
+<span class="k">for</span> <span class="n">edge</span> <span class="ow">in</span> <span class="n">net_adj_tree_graph</span><span class="o">.</span><span class="n">edges</span><span class="p">:</span>
+  <span class="n">layer</span> <span class="o">=</span> <span class="n">edge</span><span class="p">[</span><span class="mi">0</span><span class="p">][</span><span class="mi">1</span><span class="p">]</span>
+  <span class="n">layer_name</span> <span class="o">=</span> <span class="n">layers</span><span class="p">[</span><span class="n">layer</span><span class="p">][</span><span class="mi">0</span><span class="p">]</span>
+  <span class="n">resistance</span> <span class="o">=</span> <span class="n">technology_resistance</span><span class="p">[</span><span class="n">layer_name</span><span class="p">]</span>
+  <span class="n">nx</span><span class="o">.</span><span class="n">set_edge_attributes</span><span class="p">(</span>
+    <span class="n">net_adj_tree_graph</span><span class="p">,</span> <span class="p">{</span><span class="n">edge</span><span class="p">:</span> <span class="n">resistance</span><span class="p">},</span> <span class="s2">&quot;edge-resistance&quot;</span>
+  <span class="p">)</span>
+
+<span class="n">resistance_map</span> <span class="o">=</span> <span class="n">resistance_distance</span><span class="p">(</span>
+    <span class="n">nx</span><span class="o">.</span><span class="n">to_undirected</span><span class="p">(</span><span class="n">net_adj_tree_graph</span><span class="p">),</span> 
+    <span class="n">nodeA</span><span class="o">=</span><span class="n">source</span><span class="p">,</span>
+    <span class="n">nodeB</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="c1"># target is None to compute the resistance to all nodes</span>
+    <span class="n">weight</span><span class="o">=</span><span class="s2">&quot;edge-resistance&quot;</span>
+<span class="p">)</span>
+<span class="c1"># annotate the nodes of the graph with the resistance </span>
+<span class="c1"># distance between the source and other nodes</span>
+<span class="p">[</span><span class="n">nx</span><span class="o">.</span><span class="n">set_node_attributes</span><span class="p">(</span>
+  <span class="n">net_adj_tree_graph</span><span class="p">,</span> 
+  <span class="p">{</span><span class="n">node</span><span class="p">:</span> <span class="n">resistance</span><span class="p">},</span> 
+  <span class="n">name</span><span class="o">=</span><span class="s2">&quot;node-resistance&quot;</span>
+<span class="p">)</span> <span class="k">for</span> <span class="n">node</span><span class="p">,</span> <span class="n">resistance</span> <span class="ow">in</span> <span class="n">resistance_map</span><span class="o">.</span><span class="n">items</span><span class="p">()];</span>
+</code></pre></div>
+
+<div class="codehilite"><pre><span></span><code><span class="n">nx</span><span class="o">.</span><span class="n">draw</span><span class="p">(</span><span class="n">net_adjacency_graph</span><span class="p">)</span>
+</code></pre></div>
+
+<p><img alt="png" src="../3D_signoff_IR_files/3D_signoff_IR_33_0.png" /></p>
+<div class="codehilite"><pre><span></span><code><span class="nb">list</span><span class="p">(</span><span class="n">resistance_map</span><span class="o">.</span><span class="n">items</span><span class="p">())[:</span><span class="mi">10</span><span class="p">]</span>
+</code></pre></div>
+
+<div class="codehilite"><pre><span></span><code>[((19, (2, 0)), np.float64(0.0)),
+ ((7, (2, 0)), np.float64(0.0010000000000000009)),
+ ((8, (2, 0)), np.float64(0.0010000000000000148)),
+ ((38, (2, 1)), np.float64(0.0009999999999999176)),
+ ((6, (2, 0)), np.float64(0.0019999999999998908)),
+ ((9, (2, 0)), np.float64(0.002000000000000113)),
+ ((122, (3, 0)), np.float64(0.20099999999653825)),
+ ((5, (2, 0)), np.float64(0.002999999999999725)),
+ ((10, (2, 0)), np.float64(0.0030000000000002663)),
+ ((113, (3, 0)), np.float64(0.20199999999651141))]
+</code></pre></div>
+
+<div class="codehilite"><pre><span></span><code><span class="kn">import</span> <span class="nn">matplotlib.cm</span> <span class="k">as</span> <span class="nn">cm</span>
+<span class="kn">import</span> <span class="nn">matplotlib.pyplot</span> <span class="k">as</span> <span class="nn">plt</span>
+<span class="n">jetcmap</span> <span class="o">=</span> <span class="n">cm</span><span class="o">.</span><span class="n">jet</span>
+<span class="n">jetcmap</span><span class="p">(</span><span class="mf">0.0</span><span class="p">)</span>
+</code></pre></div>
+
+<div class="codehilite"><pre><span></span><code>(np.float64(0.0), np.float64(0.0), np.float64(0.5), np.float64(1.0))
+</code></pre></div>
+
+<p>Raster the vectorized traced power net into a 3D stack of 2D images, back-annotaing the IR drop information to the rastered net.</p>
+<div class="codehilite"><pre><span></span><code><span class="n">min_pix</span> <span class="o">=</span> <span class="mi">0</span>
+<span class="n">max_pix</span> <span class="o">=</span> <span class="mi">2</span><span class="o">**</span><span class="mi">10</span>
+<span class="n">net_bbox</span> <span class="o">=</span> <span class="n">fragmented_net_cell</span><span class="o">.</span><span class="n">bounding_box</span><span class="p">()</span>
+<span class="n">dx</span> <span class="o">=</span> <span class="n">net_bbox</span><span class="p">[</span><span class="mi">1</span><span class="p">][</span><span class="mi">0</span><span class="p">]</span> <span class="o">-</span> <span class="n">net_bbox</span><span class="p">[</span><span class="mi">0</span><span class="p">][</span><span class="mi">0</span><span class="p">]</span>
+<span class="n">dy</span> <span class="o">=</span> <span class="n">net_bbox</span><span class="p">[</span><span class="mi">1</span><span class="p">][</span><span class="mi">1</span><span class="p">]</span> <span class="o">-</span> <span class="n">net_bbox</span><span class="p">[</span><span class="mi">0</span><span class="p">][</span><span class="mi">1</span><span class="p">]</span>
+<span class="n">aspect_ratio</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">abs</span><span class="p">(</span><span class="n">dy</span><span class="o">/</span><span class="n">dx</span><span class="p">)</span>
+<span class="n">net_domain</span> <span class="o">=</span> <span class="p">((</span><span class="n">net_bbox</span><span class="p">[</span><span class="mi">0</span><span class="p">][</span><span class="mi">0</span><span class="p">],</span> <span class="n">net_bbox</span><span class="p">[</span><span class="mi">1</span><span class="p">][</span><span class="mi">1</span><span class="p">]),</span> <span class="p">(</span><span class="n">net_bbox</span><span class="p">[</span><span class="mi">1</span><span class="p">][</span><span class="mi">0</span><span class="p">],</span> <span class="n">net_bbox</span><span class="p">[</span><span class="mi">0</span><span class="p">][</span><span class="mi">1</span><span class="p">]))</span>
+<span class="n">img_domain</span> <span class="o">=</span> <span class="p">((</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">),</span> <span class="p">(</span><span class="nb">int</span><span class="p">(</span><span class="n">max_pix</span><span class="o">*</span><span class="n">aspect_ratio</span><span class="p">),</span> <span class="n">max_pix</span><span class="p">))</span>
+<span class="n">images</span> <span class="o">=</span> <span class="p">{</span><span class="n">layer</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">((</span><span class="nb">int</span><span class="p">(</span><span class="n">max_pix</span><span class="o">*</span><span class="n">aspect_ratio</span><span class="p">),</span> <span class="n">max_pix</span><span class="p">))</span> <span class="k">for</span> <span class="n">layer</span> <span class="ow">in</span> <span class="n">poly_dict</span><span class="o">.</span><span class="n">keys</span><span class="p">()}</span>
+<span class="k">for</span> <span class="n">layer</span> <span class="ow">in</span> <span class="n">poly_dict</span><span class="p">:</span>
+  <span class="n">images</span><span class="p">[</span><span class="n">layer</span><span class="p">][:]</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">nan</span>
+
+<span class="n">MIN_RES</span> <span class="o">=</span> <span class="mf">0.0</span>
+<span class="n">MAX_RES</span> <span class="o">=</span> <span class="nb">max</span><span class="p">(</span><span class="nb">list</span><span class="p">(</span><span class="n">resistance_map</span><span class="o">.</span><span class="n">values</span><span class="p">()))</span>
+
+<span class="k">def</span> <span class="nf">norm_res</span><span class="p">(</span><span class="n">r</span><span class="p">,</span> <span class="n">minr</span><span class="p">,</span> <span class="n">maxr</span><span class="p">):</span>
+  <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">abs</span><span class="p">((</span><span class="n">r</span> <span class="o">-</span> <span class="n">minr</span><span class="p">)</span><span class="o">/</span><span class="p">(</span><span class="n">maxr</span> <span class="o">-</span> <span class="n">minr</span><span class="p">))</span>
+
+
+
+<span class="k">def</span> <span class="nf">paint</span><span class="p">(</span><span class="n">color</span><span class="p">,</span> <span class="n">vector_region</span><span class="p">,</span> <span class="n">image</span><span class="p">,</span> <span class="n">vector_domain</span><span class="p">,</span> <span class="n">img_domain</span><span class="p">):</span>
+  <span class="kn">import</span> <span class="nn">pdb</span>
+  <span class="n">start</span><span class="p">,</span> <span class="n">end</span> <span class="o">=</span> <span class="p">((</span><span class="n">vector_region</span><span class="p">[</span><span class="mi">0</span><span class="p">][</span><span class="mi">0</span><span class="p">],</span> <span class="n">vector_region</span><span class="p">[</span><span class="mi">1</span><span class="p">][</span><span class="mi">1</span><span class="p">]),</span> 
+                <span class="p">(</span><span class="n">vector_region</span><span class="p">[</span><span class="mi">1</span><span class="p">][</span><span class="mi">0</span><span class="p">],</span> <span class="n">vector_region</span><span class="p">[</span><span class="mi">0</span><span class="p">][</span><span class="mi">1</span><span class="p">]))</span>
+
+  <span class="c1">#start, end = vector_region</span>
+  <span class="n">my</span> <span class="o">=</span> <span class="p">(</span><span class="n">img_domain</span><span class="p">[</span><span class="mi">1</span><span class="p">][</span><span class="mi">1</span><span class="p">]</span> <span class="o">-</span> <span class="n">img_domain</span><span class="p">[</span><span class="mi">0</span><span class="p">][</span><span class="mi">1</span><span class="p">])</span> <span class="o">/</span> <span class="p">(</span><span class="n">vector_domain</span><span class="p">[</span><span class="mi">1</span><span class="p">][</span><span class="mi">1</span><span class="p">]</span><span class="o">-</span><span class="n">vector_domain</span><span class="p">[</span><span class="mi">0</span><span class="p">][</span><span class="mi">1</span><span class="p">])</span>
+  <span class="n">mx</span> <span class="o">=</span> <span class="p">(</span><span class="n">img_domain</span><span class="p">[</span><span class="mi">1</span><span class="p">][</span><span class="mi">0</span><span class="p">]</span> <span class="o">-</span> <span class="n">img_domain</span><span class="p">[</span><span class="mi">0</span><span class="p">][</span><span class="mi">0</span><span class="p">])</span> <span class="o">/</span> <span class="p">(</span><span class="n">vector_domain</span><span class="p">[</span><span class="mi">1</span><span class="p">][</span><span class="mi">0</span><span class="p">]</span><span class="o">-</span><span class="n">vector_domain</span><span class="p">[</span><span class="mi">0</span><span class="p">][</span><span class="mi">0</span><span class="p">])</span>
+
+  <span class="n">start_x</span> <span class="o">=</span> <span class="p">(</span><span class="n">start</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">-</span> <span class="n">vector_domain</span><span class="p">[</span><span class="mi">0</span><span class="p">][</span><span class="mi">0</span><span class="p">])</span> <span class="o">*</span> <span class="n">mx</span>
+  <span class="n">start_y</span> <span class="o">=</span> <span class="p">(</span><span class="n">start</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">-</span> <span class="n">vector_domain</span><span class="p">[</span><span class="mi">0</span><span class="p">][</span><span class="mi">1</span><span class="p">])</span> <span class="o">*</span> <span class="n">my</span>
+
+  <span class="n">end_x</span> <span class="o">=</span> <span class="p">(</span><span class="n">end</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">-</span> <span class="n">vector_domain</span><span class="p">[</span><span class="mi">0</span><span class="p">][</span><span class="mi">0</span><span class="p">])</span> <span class="o">*</span> <span class="n">mx</span>
+  <span class="n">end_y</span> <span class="o">=</span> <span class="p">(</span><span class="n">end</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">-</span> <span class="n">vector_domain</span><span class="p">[</span><span class="mi">0</span><span class="p">][</span><span class="mi">1</span><span class="p">])</span> <span class="o">*</span> <span class="n">my</span>
+
+  <span class="n">img_start_y</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">floor</span><span class="p">(((</span><span class="n">start_y</span><span class="p">)</span> <span class="o">+</span> <span class="n">img_domain</span><span class="p">[</span><span class="mi">0</span><span class="p">][</span><span class="mi">1</span><span class="p">]))</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="nb">int</span><span class="p">)</span>
+  <span class="n">img_start_x</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">floor</span><span class="p">(((</span><span class="n">start_x</span><span class="p">)</span> <span class="o">+</span> <span class="n">img_domain</span><span class="p">[</span><span class="mi">0</span><span class="p">][</span><span class="mi">0</span><span class="p">]))</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="nb">int</span><span class="p">)</span>
+
+  <span class="n">img_end_y</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">ceil</span><span class="p">(((</span><span class="n">end_y</span><span class="p">)</span> <span class="o">+</span> <span class="n">img_domain</span><span class="p">[</span><span class="mi">0</span><span class="p">][</span><span class="mi">1</span><span class="p">]))</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="nb">int</span><span class="p">)</span>
+  <span class="n">img_end_x</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">ceil</span><span class="p">(((</span><span class="n">end_x</span><span class="p">)</span> <span class="o">+</span> <span class="n">img_domain</span><span class="p">[</span><span class="mi">0</span><span class="p">][</span><span class="mi">0</span><span class="p">]))</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="nb">int</span><span class="p">)</span>
+
+  <span class="n">image</span><span class="p">[</span><span class="n">img_start_y</span><span class="p">:</span> <span class="n">img_end_y</span><span class="o">+</span><span class="mi">1</span><span class="p">,</span> <span class="n">img_start_x</span><span class="p">:</span> <span class="n">img_end_x</span><span class="o">+</span><span class="mi">1</span><span class="p">]</span> <span class="o">=</span> <span class="n">color</span>
+
+  <span class="k">return</span> <span class="n">image</span>
+
+<span class="k">for</span> <span class="n">node</span><span class="p">,</span> <span class="n">resistance</span> <span class="ow">in</span> <span class="n">resistance_map</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+  <span class="n">poly_id</span><span class="p">,</span> <span class="n">layer</span> <span class="o">=</span> <span class="n">node</span>
+  <span class="n">poly</span> <span class="o">=</span> <span class="n">poly_dict</span><span class="p">[</span><span class="n">layer</span><span class="p">][</span><span class="n">poly_id</span><span class="p">]</span>
+  <span class="c1">#color = jetcmap(norm_res(resistance, MIN_RES, MAX_RES))</span>
+
+  <span class="n">paint</span><span class="p">(</span><span class="n">resistance</span><span class="p">,</span> <span class="n">poly</span><span class="o">.</span><span class="n">bounding_box</span><span class="p">(),</span> <span class="n">images</span><span class="p">[</span><span class="n">layer</span><span class="p">],</span> <span class="n">net_domain</span><span class="p">,</span> <span class="n">img_domain</span><span class="p">)</span>
+</code></pre></div>
+
+<div class="codehilite"><pre><span></span><code><span class="kn">import</span> <span class="nn">plotly.graph_objects</span> <span class="k">as</span> <span class="nn">go</span>
+
+<span class="c1"># Stack the 2D images into a 3D array (shape: 10x10x3)</span>
+<span class="n">stacked_images_3d</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">stack</span><span class="p">([</span><span class="n">images</span><span class="p">[</span><span class="n">layer</span><span class="p">]</span> <span class="k">for</span> <span class="n">layer</span> <span class="ow">in</span> <span class="n">images</span><span class="o">.</span><span class="n">keys</span><span class="p">()</span> <span class="k">if</span> <span class="n">layer</span><span class="p">],</span> <span class="n">axis</span><span class="o">=-</span><span class="mi">1</span><span class="p">)</span>
+
+<span class="c1"># Get the shape of the images</span>
+
+<span class="nb">print</span><span class="p">(</span><span class="n">stacked_images_3d</span><span class="o">.</span><span class="n">shape</span><span class="p">)</span>
+
+<span class="n">height</span><span class="p">,</span> <span class="n">width</span><span class="p">,</span> <span class="n">depth</span> <span class="o">=</span> <span class="n">stacked_images_3d</span><span class="o">.</span><span class="n">shape</span>
+
+<span class="c1"># Create meshgrid for x and y coordinates</span>
+<span class="n">x</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">arange</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="n">width</span><span class="p">)</span>
+<span class="n">y</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">arange</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="n">height</span><span class="p">)</span>
+<span class="n">x</span><span class="p">,</span> <span class="n">y</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">meshgrid</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">y</span><span class="p">)</span>
+
+<span class="c1"># Create the figure using plotly</span>
+<span class="n">fig</span> <span class="o">=</span> <span class="n">go</span><span class="o">.</span><span class="n">Figure</span><span class="p">()</span>
+
+<span class="c1"># Plot each slice of the 3D stack as a surface</span>
+<span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">depth</span><span class="p">):</span>
+    <span class="c1"># Get the RGB values for the slice at index i</span>
+    <span class="n">slice_rgb</span> <span class="o">=</span> <span class="n">stacked_images_3d</span><span class="p">[:,</span> <span class="p">:,</span> <span class="n">i</span><span class="p">]</span>
+    <span class="n">mask</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">isnan</span><span class="p">(</span><span class="n">stacked_images_3d</span><span class="p">[:,</span> <span class="p">:,</span> <span class="n">i</span><span class="p">])</span>
+    <span class="n">xx</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">where</span><span class="p">(</span><span class="n">mask</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">nan</span><span class="p">,</span> <span class="n">x</span><span class="p">)</span>
+    <span class="n">yy</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">where</span><span class="p">(</span><span class="n">mask</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">nan</span><span class="p">,</span> <span class="n">y</span><span class="p">)</span>
+
+    <span class="n">z</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">zeros_like</span><span class="p">(</span><span class="n">x</span><span class="p">)</span><span class="o">+</span><span class="n">i</span><span class="o">*</span><span class="mi">5</span>
+
+    <span class="n">zz</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">where</span><span class="p">(</span><span class="n">mask</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">nan</span><span class="p">,</span> <span class="n">z</span><span class="p">)</span>
+
+    <span class="c1"># Plot the surface with RGB values</span>
+    <span class="n">fig</span><span class="o">.</span><span class="n">add_trace</span><span class="p">(</span><span class="n">go</span><span class="o">.</span><span class="n">Surface</span><span class="p">(</span>
+        <span class="n">x</span><span class="o">=</span><span class="n">xx</span><span class="p">,</span> <span class="n">y</span><span class="o">=</span><span class="n">yy</span><span class="p">,</span> <span class="n">z</span><span class="o">=</span><span class="n">zz</span><span class="p">,</span>  <span class="c1"># Coordinates for the meshgrid (flat on the z-axis)</span>
+        <span class="n">surfacecolor</span><span class="o">=</span><span class="n">slice_rgb</span><span class="p">,</span>  <span class="c1"># Use RGB colors for the surface</span>
+        <span class="n">colorscale</span><span class="o">=</span><span class="s1">&#39;jet&#39;</span><span class="p">,</span>  <span class="c1"># Use RGB color scale</span>
+        <span class="n">opacity</span><span class="o">=</span><span class="mf">1.0</span><span class="p">,</span>
+        <span class="n">cmin</span> <span class="o">=</span> <span class="n">MIN_RES</span><span class="p">,</span>
+        <span class="n">cmax</span> <span class="o">=</span> <span class="n">MAX_RES</span><span class="o">*</span><span class="mf">1.5</span><span class="p">,</span>
+        <span class="n">colorbar</span><span class="o">=</span><span class="p">{</span><span class="s2">&quot;title&quot;</span><span class="p">:</span> <span class="s1">&#39;IR Drop [V]&#39;</span><span class="p">}</span>
+    <span class="p">))</span>
+
+<span class="c1"># Set the layout for the figure (remove axes and add titles)</span>
+<span class="n">fig</span><span class="o">.</span><span class="n">update_layout</span><span class="p">(</span>
+    <span class="n">title</span><span class="o">=</span><span class="s1">&#39;IC Layers 3D Stack&#39;</span><span class="p">,</span>
+    <span class="n">scene</span><span class="o">=</span><span class="nb">dict</span><span class="p">(</span>
+        <span class="n">xaxis</span><span class="o">=</span><span class="nb">dict</span><span class="p">(</span><span class="n">showgrid</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">zeroline</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">showticklabels</span><span class="o">=</span><span class="kc">False</span><span class="p">),</span>
+        <span class="n">yaxis</span><span class="o">=</span><span class="nb">dict</span><span class="p">(</span><span class="n">showgrid</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">zeroline</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">showticklabels</span><span class="o">=</span><span class="kc">False</span><span class="p">),</span>
+        <span class="n">zaxis</span><span class="o">=</span><span class="nb">dict</span><span class="p">(</span><span class="n">showgrid</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">zeroline</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">showticklabels</span><span class="o">=</span><span class="kc">False</span><span class="p">),</span>
+    <span class="p">),</span>
+    <span class="c1">#margin=dict(t=50, b=50, l=50, r=50),  # Add some margin to avoid clipping</span>
+    <span class="n">template</span> <span class="o">=</span> <span class="s2">&quot;plotly_dark&quot;</span>
+<span class="p">)</span>
+
+<span class="c1"># Show the plot</span>
+<span class="n">fig</span><span class="o">.</span><span class="n">show</span><span class="p">()</span>
+</code></pre></div>
+
+<div class="codehilite"><pre><span></span><code>(1044, 1024, 3)
+</code></pre></div>
+
+<p><img alt="plotly_ir_drop" src="../3D_signoff_IR_files/ir_drop_plotly.gif" /></p></div>
+            </div>
+        </div>
+
+        <footer class="col-md-12">
+            <hr>
+            <p>Documentation built with <a href="https://www.mkdocs.org/">MkDocs</a>.</p>
+        </footer>
+        <script src="../js/jquery-3.6.0.min.js"></script>
+        <script src="../js/bootstrap.min.js"></script>
+        <script>
+            var base_url = "..",
+                shortcuts = {"help": 191, "next": 78, "previous": 80, "search": 83};
+        </script>
+        <script src="../js/base.js"></script>
+        <script src="https://cdn.jsdelivr.net/npm/mathjax@2/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+        <script src="../mathjaxhelper.js"></script>
+        <script src="../search/main.js"></script>
+
+        <div class="modal" id="mkdocs_search_modal" tabindex="-1" role="dialog" aria-labelledby="searchModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h4 class="modal-title" id="searchModalLabel">Search</h4>
+                <button type="button" class="close" data-dismiss="modal"><span aria-hidden="true">&times;</span><span class="sr-only">Close</span></button>
+            </div>
+            <div class="modal-body">
+                <p>From here you can search these documents. Enter your search terms below.</p>
+                <form>
+                    <div class="form-group">
+                        <input type="search" class="form-control" placeholder="Search..." id="mkdocs-search-query" title="Type search term here">
+                    </div>
+                </form>
+                <div id="mkdocs-search-results" data-no-results-text="No results found"></div>
+            </div>
+            <div class="modal-footer">
+            </div>
+        </div>
+    </div>
+</div><div class="modal" id="mkdocs_keyboard_modal" tabindex="-1" role="dialog" aria-labelledby="keyboardModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h4 class="modal-title" id="keyboardModalLabel">Keyboard Shortcuts</h4>
+                <button type="button" class="close" data-dismiss="modal"><span aria-hidden="true">&times;</span><span class="sr-only">Close</span></button>
+            </div>
+            <div class="modal-body">
+              <table class="table">
+                <thead>
+                  <tr>
+                    <th style="width: 20%;">Keys</th>
+                    <th>Action</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr>
+                    <td class="help shortcut"><kbd>?</kbd></td>
+                    <td>Open this help</td>
+                  </tr>
+                  <tr>
+                    <td class="next shortcut"><kbd>n</kbd></td>
+                    <td>Next page</td>
+                  </tr>
+                  <tr>
+                    <td class="prev shortcut"><kbd>p</kbd></td>
+                    <td>Previous page</td>
+                  </tr>
+                  <tr>
+                    <td class="search shortcut"><kbd>s</kbd></td>
+                    <td>Search</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+            <div class="modal-footer">
+            </div>
+        </div>
+    </div>
+</div>
+
+    </body>
+</html>
