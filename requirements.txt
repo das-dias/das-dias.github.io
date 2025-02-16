@@ -1,3 +1,4 @@
 ruff
 mkdocs
 mkdocs-bootswatch
+mkdocs-plotly-plugin 

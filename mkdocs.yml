@@ -12,7 +12,9 @@ nav:
   - Home: index.md
   - Miscellaneous: misc.md
   - Signal-Converters: signal_converters.md
-  - Computational Electromagnetics: computational_electromagnetics.md
+  - Signoff Tools: signoff_tools.md
+  #- Computational Electromagnetics: computational_electromagnetics.md
+
 theme:
   name: slate
   locale: en
@@ -31,6 +33,9 @@ markdown_extensions:
   - fenced_code
   - codehilite
 
+plugins: 
+  - search
+  
 extra_javascript:
   - https://cdn.jsdelivr.net/npm/mathjax@2/MathJax.js?config=TeX-AMS-MML_HTMLorMML
   - mathjaxhelper.js
