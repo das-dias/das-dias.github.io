@@ -26,6 +26,7 @@ E-mail:
 ---
 
 ## 🎓 Education  
+
 ### PhD in Electrical and Computers Engineering
 *NOVA University of Lisbon / TU-Delft (May 2022 - Ongoing)*
 **Mixed Scholarship with TU-Delft EEMCS, [MITUS Group at the Bioelectronics Department](https://mitus-lab.netlify.app/team/)**
