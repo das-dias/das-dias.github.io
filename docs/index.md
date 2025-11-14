@@ -4,7 +4,7 @@
     <img src="img/croped_no_teeth.jpg" alt="Profile Picture" class="profile-pic" style="width: 150px; height: 150px; border-radius: 50%; object-fit: cover;">
   </div>
   <div class="header-titles" style="text-align: left;">
-    <h1>Analog / Mixed-Signal IC Engineer</h1>
+    <h1>Diagnostic Ultrasound / Electrical Engineer</h1>
     PhD candidate at NOVA-UNL / TU Delft
   </div>
 </header>
