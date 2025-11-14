@@ -9,9 +9,7 @@
   </div>
 </header>
 
-Welcome. This is a personal website built on top of [MkDocs](https://www.mkdocs.org/getting-started/).
-
-Hi! My name is Diogo André. I'm currently pursuing a PhD in Nanoelectronics under a mixed-scholarship at NOVA University of Lisbon, School of Science and Technology (Monte da Caparica, Portugal), and TU Delft, Bioelectronics Group (Delft, The Netherlands). I'm specialising in Analog / Mixed-Signal IC Design, focusing on Analog Front-Ends and Quantizer ASIC Interfaces for Ultrasound Imaging Transducer Arrays. I am also a big fan of using C-lang and Python to develop my own tools for automatic layout design and custom extractors for parasitic passive lumped elements and crosstalk between signal lines. Feel free to contact me!
+Hi! My name is Diogo André. I'm currently pursuing a PhD in Nanoelectronics under a mixed-scholarship at NOVA University of Lisbon, School of Science and Technology (Monte da Caparica, Portugal), and TU Delft, Bioelectronics Group (Delft, The Netherlands). I'm specialising in Analog / Mixed-Signal IC Design, focusing on Analog Front-Ends and ASIC Interfaces for Ultrasound Imaging Transducer Arrays. I am also a big fan of using C-lang and Python to develop my own tools for automatic layout design and custom extractors for analysing parasitic passive lumped elements and crosstalk between signal lines. Feel free to contact me!
 
 ## 📂 Personal Info
 
@@ -27,40 +25,47 @@ E-mail:
 ---
 
 ## 🎓 Education  
+### PhD in Electrical and Computers Engineering
+*NOVA University of Lisbon / TU-Delft (May 2022 - Ongoing)*
+**Mixed Scholarship with TU-Delft EEMCS, [MITUS Group at the Bioelectronics Department](https://mitus-lab.netlify.app/team/)**
+
 ### MSc. in Electrical and Computers Engineering  
 *NOVA University of Lisbon (Sep 2019 - Dec 2021)*  
-**Grade:** 17/20  
+**Scholarship** 
 
 ### BSc. in Electrical and Computers Engineering  
-*NOVA University of Lisbon (Sep 2016 - Jul 2019)*  
-**Grade:** 17/20  
+*NOVA University of Lisbon (Sep 2016 - Jul 2019)*   
 
 ---
 
 ## 🏢 Experience  
 #### CMOS Process Development Kits (PDKs)
-**28 nm (HPC+) TSMC PDK**, **130 nm UMC PDK**
+**28 nm HPC+ RF TSMC PDK**, **130 nm UMC RF PDK**, **130 nm Skywater PDK**
 
-#### PhD Candidate (ASICs For Ultrasound Image-Guided Vagus Nerve Stimulation)
+#### PhD Candidate (ASICs For Ultrasound Image-Guided Neuromodulation)
 *NOVA University of Lisbon, Delft University of Technology (May 2022 - Ongoing)*
 
-#### Nyquist Data-Rate Converters Course (Teaching Assistant)  
+#### Nyquist Data-Rate Converters (Teaching Assistant)  
 *Delft University of Technology (Feb - May 2024)*  
 
 #### Erasmus+ Traineeship Student  
 *Delft University of Technology (Feb - Jun 2021)*  
 - Master Thesis Dissertation  
 
-#### Electronics II Course (Teaching Assistant)  
+#### Electronics II - Oscillators, Filters and Sensors (Teaching Assistant)  
 *NOVA University of Lisbon (Sep - Dec 2019)*  
 
 ---
 
 ## 📚 Research  
 
+#### *A Programmable-Gain Floating Inverter Low-Noise Amplifier for Ultrasound Imaging Analog Frontends*
+*CTS, LASI, NOVA University of Lisbon, MITUS Group TU-Delft (May 2025)*  
+- [**IEEE ISCAS ’25 Publication**](https://doi.org/10.1109/ISCAS56072.2025.11043193)  
+
 #### *A PVT-Robust Open-loop Gm-Ratio× 16 Gain Residue Amplifier for> 1 GS/s Pipelined ADCs*
-*CTS, LASI, NOVA University of Lisbon (Dec 2023)*  
-- [**IEEE ISCAS ’24 Publication**](https://ieeexplore.ieee.org/abstract/document/10558154)  
+*CTS, LASI, NOVA University of Lisbon (May 2024)*  
+- [**IEEE ISCAS ’24 Publication**](https://doi.org/10.1109/ISCAS58744.2024.10558154)  
 
 #### *A Parasitic Resistance Extraction Tool Leveraged by Image Processing*  
 *PDEEC, NOVA University of Lisbon (Dec 2021)*  
@@ -76,12 +81,16 @@ E-mail:
 
 ---
 ## 🛠️ Technical Skills & Tools  
-- *Cadence* - **Analog / Mixed-Signal Base-Band & RF IC Design**  
-- *Cadence / KLayout / Python* - **IC Layout Design**  
-- *Xillinx ISE* - **Digital IC Design, Verilog**
-- **MATLAB, Python, C, Verilog**  
-- **MS Office, Git, LaTeX**  
-- **(Mac) OSX, Linux(Ubuntu/CentOS), Windows**  
+- *Cadence Virtuoso / Calibre / SPICE / Spectre* - **Analog / Mixed-Signal IC Design Flow**
+- *Python (Cocotb) / Calibre Genus & Innovus / SystemVerilog* - **Digital IC Design Flow**
+- *Cadence / Calibre / KLayout / Python (GDSTK)* - **IC Layout Design**
+- *Altium / KiCAD* - **High-Density, Moderate-to-High Frequency PCB Design**
+- *Fusion 3D* - **Laboratory/Experiment Equipment Development**
+- *Tool Building / Scripting* - **MATLAB, Python, C, Go, Verilog, SystemVerilog**
+- *Physics / Sensor Simulation & Modelling* - **COMSOL Multiphysics / KWave (Matlab) / MUST (Python)**
+- *Documentation* - **MS Office, Git, LaTeX, Markdown, Google Colab**
+- *Visual Documentation / Illustration* - **Blender / PowerPoint / Inkscape / Python** 
+- *Operating Systems* - **(Mac) OSX, Linux(Ubuntu/CentOS), Windows OS**
 
 ---
 
@@ -111,12 +120,15 @@ E-mail:
 
 ### Master Thesis Dissertation  
 *NOVA University of Lisbon & Delft University of Technology (Sep 2020 - Dec 2021)*  
-- **"On the Use of Image Processing for 3D Parasitic Resistance Networks Extraction in Integrated Circuits"**  
-- **Grade:** 19/20  
+- **"On the Use of Image Processing for 3D Parasitic Resistance Networks Extraction in Integrated Circuits"** 
 
 ### Zero-IF FSK RF Receiver Analog Front-End  
 *NOVA University of Lisbon (Sep - Dec 2020)*  
-- Designed in **0.13µm (MM/RF) UMC technology**  
+- Designed in **0.13µm (MM/RF) UMC technology**
+
+### AMD Artix 6 FPGA USART, SPI, I2C Driver Implementation
+*NOVA University of Lisbon (Sep - Dec 2020)*  
+- VHDL Implementation, AMD (previous Xilinx) ISE compilation toolchain
 
 ### 120 dB Gain, Low-Voltage (0.9 V supply) Operational Transconductance Amplifier  
 *NOVA University of Lisbon (Sep - Nov 2020)*  
@@ -131,7 +143,7 @@ E-mail:
 ## 🌍 Languages  
 - **Portuguese:** ○ ○ ○ ○ ○  
 - **English:** ○ ○ ○ ○ ○  
-- **Spanish:** ○ ○ ○  
+- **Spanish:** ○ ○
 - **Dutch:** ○ ○  
 
 ---
@@ -148,8 +160,8 @@ E-mail:
 ---
 
 ## 🎨 Hobbies  
-- Reading and watching documentaries about History
+- Reading
 - Electric Bass Guitar
-- Half-Marathon Running
+- Running
 - Contributing to open-source EDA-CAD software
 
