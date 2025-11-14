@@ -11,8 +11,8 @@ validation:
 nav:
   - Home: index.md
   - Miscellaneous: misc.md
-  - Signal-Converters: signal_converters.md
-  - Signoff Tools: signoff_tools.md
+  #- Signal-Converters: signal_converters.md
+  #- Signoff Tools: signoff_tools.md
   #- Computational Electromagnetics: computational_electromagnetics.md
 
 theme:
