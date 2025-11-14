@@ -1,7 +1,7 @@
 
 <header class="header" style="display: flex; align-items: center; justify-content: space-between; padding: 10px 20px;">
   <div class="profile-pic-container" style="flex-shrink: 0; padding: 3px;">
-    <img src="img/profile_pic.png" alt="Profile Picture" class="profile-pic" style="width: 150px; height: 150px; border-radius: 50%; object-fit: cover;">
+    <img src="img/croped_no_teeth.jpg" alt="Profile Picture" class="profile-pic" style="width: 150px; height: 150px; border-radius: 50%; object-fit: cover;">
   </div>
   <div class="header-titles" style="text-align: left;">
     <h1>Analog / Mixed-Signal IC Engineer</h1>
